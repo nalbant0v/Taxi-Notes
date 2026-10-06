@@ -167,6 +167,10 @@ nav button[aria-current="page"]{color:var(--ink);font-weight:800;box-shadow:inse
 .toggle input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--amber);flex:none}
 .toggle small{display:block;color:var(--muted);font-size:.85rem;margin-top:4px}
 .oldlink{display:block;width:100%;margin-top:18px;padding:14px;border-radius:14px;border:1px dashed var(--line);color:var(--muted);font-weight:600;text-align:center}
+.duein{width:8.5em;text-align:center}
+.duein.bad{border-color:var(--red);outline:2px solid var(--red)}
+.callout{margin:22px 0 4px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--amber) 18%,var(--surface));border:1px solid var(--amber);font-size:.92rem;line-height:1.4}
+.callout.warn{background:color-mix(in srgb,var(--red) 14%,var(--surface));border-color:var(--red)}
 .err{color:var(--red);font-size:.9rem;min-height:1.2em;margin-top:6px}
 @media (prefers-reduced-motion:reduce){.sheet{transition:none}}
 </style>
@@ -284,9 +288,12 @@ const hm=ms=>{const m=Math.floor(ms/60000);return Math.floor(m/60)+' ч '+String
 const time=t=>new Date(t).toLocaleTimeString('bg-BG',{hour:'2-digit',minute:'2-digit'});
 
 function curRent(){const h=S.settings.rentHist;return h.length?h[h.length-1].amt:0}
+function firstDataDay(){let m=null;for(const z of S.shifts){const k=ymd(z.start);if(!m||k<m)m=k}for(const e of S.entries){const k=ymd(e.t);if(!m||k<m)m=k}return m}
 function dailyRent(k){
-  if(k>ymd(Date.now()))return 0;
-  let a=0;for(const r of S.settings.rentHist)if(r.from<=k)a=r.amt;
+  const h=S.settings.rentHist;
+  if(!h.length||k>ymd(Date.now()))return 0;
+  const f=firstDataDay();if(!f||k<f)return 0;
+  let a=h[0].amt;for(const r of h)if(r.from<=k)a=r.amt;
   return Math.round(a/7*100)/100;
 }
 function consFor(keys){const sh=S.shifts.filter(x=>keys.has(ymd(x.start))&&x.liters&&x.km);const L=sh.reduce((a,x)=>a+x.liters,0),K=sh.reduce((a,x)=>a+x.km,0);return K?n1(L/K*100):'—'}
@@ -561,7 +568,7 @@ function viewDue(){
     if(d.date){const n=Math.round((new Date(d.date+'T00:00')-now)/86400000);
       left=n<0?`<span class="left late">Изтекло преди ${-n} дни</span>`:n===0?`<span class="left late">Изтича днес</span>`:
         `<span class="left ${n<=30?'warn':''}">След ${n} ${n===1?'ден':'дни'}</span>`;}
-    return `<div class="due"><div class="what">${d.name}<br>${left}</div><input type="date" value="${d.date}" data-due="${d.id}" aria-label="Дата за ${d.name}"></div>`;
+    return `<div class="due"><div class="what">${d.name}<br>${left}</div><input type="text" class="duein num" inputmode="numeric" maxlength="10" value="${d.date?d.date.split('-').reverse().join('.'):''}" data-due="${d.id}" aria-label="Дата за ${d.name}, като ден.месец.година"></div>`;
   }).join('');
   const soon=S.due.filter(d=>d.date&&(new Date(d.date+'T00:00')-now)/86400000<=30).length;
   return `
@@ -571,7 +578,7 @@ function viewDue(){
   </section>
   <h2>Срокове</h2>
   <div class="list">${rows}</div>
-  <p class="note">Сроковете до 30 дни се оцветяват, изтеклите са в червено.</p>`;
+  <p class="note">Пиши датата като ден.месец.година, например 15.03.2027. Можеш да слагаш точка или запетая, или само цифрите, и точките се слагат сами. Сроковете до 30 дни се оцветяват, изтеклите са в червено.</p>`;
 }
 
 function viewSet(){
@@ -582,7 +589,7 @@ function viewSet(){
   <p class="note">Смята се за всеки записан курс, в момента на записване. Ако го промениш, старите курсове остават със стария процент.</p>
   <label class="field"><span>Седмична аренда/лизинг на колата, €</span>
     <input type="text" inputmode="decimal" id="rent" value="${curRent()?String(curRent()).replace('.',','):''}"></label>
-  <p class="note">${curRent()?`Това е ${eur(curRent()/7)} на ден. `:''}Разделя се на 7 и се записва като разход „Аренда/лизинг“ всеки ден, включително в почивните. Ако я промениш, новата сума важи от днес нататък.</p>
+  <p class="note">${curRent()?`Това е ${eur(curRent()/7)} на ден. `:''}Разделя се на 7 и се записва като разход „Аренда/лизинг“ всеки ден, включително в почивните, от първата ти въведена смяна. Ако я промениш, новата сума важи от днес нататък, а миналите дни остават със старата.</p>
   <label class="field"><span>Цена на горивото, € на литър</span>
     <input type="text" inputmode="decimal" id="fuel" value="${S.settings.fuel?String(S.settings.fuel).replace('.',','):''}"></label>
   <label class="field"><span>Разход на колата, л/100 км</span>
@@ -590,7 +597,7 @@ function viewSet(){
   <p class="note">Каквото е попълнено тук, не се пита при въвеждане на смяна. Каквото е празно, ще се въвежда при всяка смяна. Горивото се смята от километрите.</p>
   <label class="field"><span>Амортизация на колата, € на 100 км</span>
     <input type="text" inputmode="decimal" id="amort" value="${S.settings.amort?String(Math.round(S.settings.amort*100*100)/100).replace('.',','):''}"></label>
-  <p class="note">Колко евро според теб струва износването на колата (гуми, ремонти, обезценка) за всеки 100 км. Сумата я определяш ти. Ако колата е под аренда, обикновено е 0 или се оставя празно.</p>
+  <p class="note"><b>Ако колата е под аренда, остави полето празно.</b> Колко евро според теб струва износването на колата (гуми, ремонти, обезценка) за всеки 100 км. Сумата я определяш ти.</p>
   <p class="note">${cloudState==='cloud'?'✓ Данните се пазят в профила ти в Claude и остават след затваряне на приложението. Никой друг не ги вижда.':cloudState==='retry'?'Последното записване в профила ти не мина. Ще опитаме отново при следващата промяна.':'Данните се пазят само на това устройство. Ако приложението изчисти паметта си, може да се загубят.'}</p>`;
 }
 
@@ -788,7 +795,13 @@ document.addEventListener('click',e=>{
   }
 });
 document.addEventListener('change',e=>{
-  if(e.target.dataset.due){const d=S.due.find(x=>x.id===e.target.dataset.due);d.date=e.target.value;save();render()}
+  if(e.target.dataset.due){const d=S.due.find(x=>x.id===e.target.dataset.due);const v=e.target.value.trim();
+    if(v===''){d.date='';save();render();return}
+    const m=v.match(/^(\d{1,2})[.,\/-](\d{1,2})[.,\/-](\d{2}|\d{4})$/);
+    let ok=false;if(m){let y=+m[3];if(y<100)y+=2000;const dt=new Date(y,+m[2]-1,+m[1]);
+      ok=dt.getFullYear()===y&&dt.getMonth()===+m[2]-1&&dt.getDate()===+m[1];
+      if(ok){d.date=ymd(dt);save();render();return}}
+    e.target.classList.add('bad');}
   if(e.target.id==='rent'){const v=e.target.value.trim();const n=v===''?0:parse(v);
     if(isNaN(n)||n<0){e.target.value=curRent()?String(curRent()).replace('.',','):'';return}
     const amt=Math.round(n*100)/100;if(amt!==curRent()){const today=ymd(Date.now());S.settings.rentHist=S.settings.rentHist.filter(r=>r.from!==today);S.settings.rentHist.push({from:today,amt});save();render()}}
@@ -796,10 +809,17 @@ document.addEventListener('change',e=>{
   if(e.target.id==='cons'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0&&n<50){S.settings.cons=Math.round(n*10)/10;save();render()}else e.target.value=S.settings.cons?String(S.settings.cons).replace('.',','):''}
   if(e.target.id==='share'){S.settings.share=e.target.checked;save()}
   if(e.target.id==='comm'){const n=parse(e.target.value);if(n>=0&&n<=100){S.settings.comm=n;save()}else e.target.value=String(S.settings.comm).replace('.',',')}
-  if(e.target.id==='amort'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.amort=n/100;save()}else e.target.value=S.settings.amort?String(Math.round(S.settings.amort*10000)/100).replace('.',','):''}
+  if(e.target.id==='amort'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.amort=n/100;save();render()}else e.target.value=S.settings.amort?String(Math.round(S.settings.amort*10000)/100).replace('.',','):''}
 });
 function upd(){const c=$('#calc');if(!c)return;const v=parse($('#amt').value)||0;if(litersMode())c.innerHTML=calcText(v);else if(sheetState&&sheetState.mode==='rev')c.innerHTML=`Комисионна ${String(S.settings.comm).replace('.',',')}%: ${eur(v*S.settings.comm/100)}, остават <b>${eur(v-v*S.settings.comm/100)}</b>`}
-document.addEventListener('input',e=>{if(e.target.id==='amt')upd();
+document.addEventListener('input',e=>{
+  if(e.target.classList&&e.target.classList.contains('duein')){e.target.classList.remove('bad');
+    const raw=e.target.value.replace(/,/g,'.');
+    if(raw==='')delete e.target.dataset.manual;
+    if(e.data==='.'||e.data===',')e.target.dataset.manual='1';
+    if(e.target.dataset.manual){e.target.value=raw.replace(/[^\d.]/g,'').replace(/\.{2,}/g,'.').slice(0,10);return}
+    const dg=raw.replace(/\D/g,'').slice(0,8);
+    e.target.value=dg.length>4?dg.slice(0,2)+'.'+dg.slice(2,4)+'.'+dg.slice(4):dg.length>2?dg.slice(0,2)+'.'+dg.slice(2):dg;return}if(e.target.id==='amt')upd();
   if(['km','fuelPrice','consIn','fuelManual'].includes(e.target.id))fuelLive();
 });
 function fuelParams(){
