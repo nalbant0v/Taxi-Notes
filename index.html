@@ -332,7 +332,7 @@ const INFO={
   fuel:['Гориво','Колко е струвало горивото за деня.','Километри ÷ 100 × разход на 100 км × цена на литър. Пример: 180 км ÷ 100 × 6,5 л × 1,45 € = 16,97 €. Ако в смяната си въвел сумата за гориво ръчно, се взима тя.'],
   rent:['Аренда/лизинг','Дневната част от седмичната аренда или лизинг на колата.','Сумата от Настройки ÷ 7. Брои се всеки ден, включително почивните, защото се плаща независимо дали работиш.'],
   out:['Други разходи','Разходите, които си въвел сам с бутона „+ Разход“.','Например измиване, храна, ремонт и други. Горивото, арендата и комисионната са отделно.'],
-  amort:['Амортизация','Износването на колата: гуми, ремонти, обезценка.','Километри × сумата на километър от Настройки. Ако колата е под аренда, трябва да е 0.'],
+  amort:['Амортизация','Износването на колата: гуми, ремонти, обезценка.','Километри ÷ 100 × сумата за 100 км, която си задал в Настройки.'],
   hours:['Отработени часове','Колко часа си работил.','Сборът от часовете на всички смени за периода.'],
   perH:['Чисто на час','Колко реално изкарваш за всеки отработен час. Най-важният показател.','Чиста печалба ÷ отработени часове.'],
   grossH:['Оборот на час','Колко пари минават през ръцете ти на час, преди удръжки.','(Оборот + бакшиш) ÷ отработени часове. Ако е много по-високо от чистото на час, разходите изяждат голяма част.'],
@@ -561,9 +561,9 @@ function viewSet(){
   <label class="field"><span>Разход на колата, л/100 км</span>
     <input type="text" inputmode="decimal" id="cons" value="${S.settings.cons?String(S.settings.cons).replace('.',','):''}"></label>
   <p class="note">Каквото е попълнено тук, не се пита при въвеждане на смяна. Каквото е празно, ще се въвежда при всяка смяна. Горивото се смята от километрите.</p>
-  <label class="field"><span>Амортизация на колата, € на километър</span>
-    <input type="text" inputmode="decimal" id="amort" value="${String(S.settings.amort).replace('.',',')}"></label>
-  <p class="note"><b>Ако колата е под аренда, попълни 0</b>, защото тези разходи са включени в арендата. Ако колата е твоя, това са гуми, ремонти и обезценка, разделени на изминатите километри. За повечето коли е между 0,05 и 0,15 €.</p>
+  <label class="field"><span>Амортизация на колата, € на 100 км</span>
+    <input type="text" inputmode="decimal" id="amort" value="${S.settings.amort?String(Math.round(S.settings.amort*100*100)/100).replace('.',','):''}"></label>
+  <p class="note">Колко евро според теб струва износването на колата (гуми, ремонти, обезценка) за всеки 100 км. Сумата я определяш ти. Ако колата е под аренда, обикновено е 0 или се оставя празно.</p>
   <p class="note">${cloudState==='cloud'?'✓ Данните се пазят в профила ти в Claude и остават след затваряне на приложението. Никой друг не ги вижда.':cloudState==='retry'?'Последното записване в профила ти не мина. Ще опитаме отново при следващата промяна.':'Данните се пазят само на това устройство. Ако приложението изчисти паметта си, може да се загубят.'}</p>
   <button class="danger" data-do="reset">${resetArmed?'Натисни пак, за да изтриеш всичко':'Изтрий всички данни'}</button>`;
 }
@@ -768,7 +768,7 @@ document.addEventListener('change',e=>{
   if(e.target.id==='fuel'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.fuel=Math.round(n*1000)/1000;save();render()}else e.target.value=S.settings.fuel?String(S.settings.fuel).replace('.',','):''}
   if(e.target.id==='cons'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0&&n<50){S.settings.cons=Math.round(n*10)/10;save();render()}else e.target.value=S.settings.cons?String(S.settings.cons).replace('.',','):''}
   if(e.target.id==='comm'){const n=parse(e.target.value);if(n>=0&&n<=100){S.settings.comm=n;save()}else e.target.value=String(S.settings.comm).replace('.',',')}
-  if(e.target.id==='amort'){const n=parse(e.target.value);if(n>=0){S.settings.amort=n;save()}else e.target.value=String(S.settings.amort).replace('.',',')}
+  if(e.target.id==='amort'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.amort=n/100;save()}else e.target.value=S.settings.amort?String(Math.round(S.settings.amort*10000)/100).replace('.',','):''}
 });
 function upd(){const c=$('#calc');if(!c)return;const v=parse($('#amt').value)||0;if(litersMode())c.innerHTML=calcText(v);else if(sheetState&&sheetState.mode==='rev')c.innerHTML=`Комисионна ${String(S.settings.comm).replace('.',',')}%: ${eur(v*S.settings.comm/100)}, остават <b>${eur(v-v*S.settings.comm/100)}</b>`}
 document.addEventListener('input',e=>{if(e.target.id==='amt')upd();
