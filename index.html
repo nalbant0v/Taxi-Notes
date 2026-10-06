@@ -163,6 +163,9 @@ nav button[aria-current="page"]{color:var(--ink);font-weight:800;box-shadow:inse
 .daynav.past{background:color-mix(in srgb,var(--amber) 16%,transparent)}
 .totoday{display:block;margin:0 auto 6px;padding:6px 12px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:.85rem;font-weight:600}
 .delshift{width:100%;margin-top:12px}
+.toggle{display:flex;gap:12px;align-items:flex-start;margin:22px 0 6px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;cursor:pointer}
+.toggle input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--amber);flex:none}
+.toggle small{display:block;color:var(--muted);font-size:.85rem;margin-top:4px}
 .oldlink{display:block;width:100%;margin-top:18px;padding:14px;border-radius:14px;border:1px dashed var(--line);color:var(--muted);font-weight:600;text-align:center}
 .err{color:var(--red);font-size:.9rem;min-height:1.2em;margin-top:6px}
 @media (prefers-reduced-motion:reduce){.sheet{transition:none}}
@@ -201,6 +204,21 @@ function load(){try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r
 let S=load();
 S.settings=Object.assign({amort:0,comm:0,commSrc:['Диспечер'],fuel:0,cons:0,rentHist:[]},S.settings);
 if(S.settings.amortV!==2){if(S.settings.amort===0.08)S.settings.amort=0;S.settings.amortV=2;}
+/* Anonymous stats: only numbers, no device or person id */
+const REPORT_URL='https://script.google.com/macros/s/AKfycby9kuVKM2sNpHMw0Pq3hSxfTBhq3mz9kEtLAXJkCMBx_ZIwscKfN1NPI1ayDHTH9zkLzA/exec';
+const APP_V='1.0';
+function newSid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4)}
+function report(action,sh){
+  try{
+    if(!REPORT_URL||S.settings.share===false||/claude/.test(location.hostname))return;
+    if(!sh.sid){sh.sid=newSid();save()}
+    const k=ymd(sh.start),h=(sh.end-sh.start)/3600000,r=shiftRev(sh),tp=shiftTip(sh),ss=action==='изтрита'?{net:0,perH:0}:shiftStats(sh);
+    const r2=v=>Math.round((v||0)*100)/100;
+    const d={id:sh.sid,action,date:k,weekday:WD[new Date(k+'T12:00').getDay()],hours:r2(h),rev:r2(r&&r.amt),tip:r2(tp&&tp.amt),orders:sh.orders||0,km:sh.km||0,fuel:r2(sh.fuel),
+      commPct:r&&r.amt?r2(r.comm/r.amt*100):r2(S.settings.comm),comm:r2(r&&r.comm),rent:r2(dailyRent(k)),net:r2(ss.net),perH:r2(ss.perH),v:APP_V};
+    fetch(REPORT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(d),keepalive:true}).catch(()=>{});
+  }catch(e){}
+}
 function cleanOrphans(){const st=new Set(S.shifts.map(z=>z.start));const before=S.entries.length;S.entries=S.entries.filter(e=>e.shift===undefined||st.has(e.shift));return S.entries.length!==before}
 if(cleanOrphans())save();
 const fuelCost=km=>Math.round(km*S.settings.cons/100*S.settings.fuel*100)/100;
@@ -564,8 +582,8 @@ function viewSet(){
   <label class="field"><span>Амортизация на колата, € на 100 км</span>
     <input type="text" inputmode="decimal" id="amort" value="${S.settings.amort?String(Math.round(S.settings.amort*100*100)/100).replace('.',','):''}"></label>
   <p class="note">Колко евро според теб струва износването на колата (гуми, ремонти, обезценка) за всеки 100 км. Сумата я определяш ти. Ако колата е под аренда, обикновено е 0 или се оставя празно.</p>
-  <p class="note">${cloudState==='cloud'?'✓ Данните се пазят в профила ти в Claude и остават след затваряне на приложението. Никой друг не ги вижда.':cloudState==='retry'?'Последното записване в профила ти не мина. Ще опитаме отново при следващата промяна.':'Данните се пазят само на това устройство. Ако приложението изчисти паметта си, може да се загубят.'}</p>
-  <button class="danger" data-do="reset">${resetArmed?'Натисни пак, за да изтриеш всичко':'Изтрий всички данни'}</button>`;
+  <label class="toggle"><input type="checkbox" id="share" ${S.settings.share!==false?'checked':''}><span><b>Анонимни данни за подобряване на тефтера</b><small>Изпращат се само числата от смените: часове, оборот, бакшиш, поръчки, километри и разходи. Без име, телефон, местоположение или номер на устройството.</small></span></label>
+  <p class="note">${cloudState==='cloud'?'✓ Данните се пазят в профила ти в Claude и остават след затваряне на приложението. Никой друг не ги вижда.':cloudState==='retry'?'Последното записване в профила ти не мина. Ще опитаме отново при следващата промяна.':'Данните се пазят само на това устройство. Ако приложението изчисти паметта си, може да се загубят.'}</p>`;
 }
 
 /* Sheet */
@@ -675,12 +693,12 @@ document.addEventListener('click',e=>{
   if(t.dataset.refuel){const sh=S.shifts.find(z=>String(z.start)===t.dataset.refuel);if(sh&&autoFuel()){sh.liters=Math.round(sh.km*S.settings.cons)/100;sh.price=S.settings.fuel;sh.fuel=Math.round(sh.liters*sh.price*100)/100;save();render()}return}
   if(t.dataset.editentry){const e=S.entries.find(x=>x.id===t.dataset.editentry);if(e)openSheet('editEntry',{editId:e.id,cat:e.cat});return}
   if(t.dataset.editshift){openSheet('edit',{editStart:Number(t.dataset.editshift)});return}
-  if(t.dataset.delshift){const sh=S.shifts.find(x=>String(x.start)===t.dataset.delshift);if(sh){const r=shiftRev(sh),tp=shiftTip(sh);S.entries=S.entries.filter(e=>e!==r&&e!==tp&&e.shift!==sh.start);S.shifts=S.shifts.filter(x=>x!==sh)}save();render();return}
+  if(t.dataset.delshift){const sh=S.shifts.find(x=>String(x.start)===t.dataset.delshift);if(sh){report('изтрита',sh);const r=shiftRev(sh),tp=shiftTip(sh);S.entries=S.entries.filter(e=>e!==r&&e!==tp&&e.shift!==sh.start);S.shifts=S.shifts.filter(x=>x!==sh)}save();render();return}
   if(t.dataset.del){S.entries=S.entries.filter(x=>x.id!==t.dataset.del);save();render();return}
   const a=t.dataset.do;
   if(a==='close'){closeSheet();return}
   if(a==='delEdit'){if(!sheetState.delArmed){sheetState.delArmed=true;const keep={};['sDate','sHours','rev','tip','km','orders','fuelManual','fuelPrice','consIn'].forEach(i=>{const x=document.getElementById(i);if(x)keep[i]=x.value});drawSheet();for(const i in keep){const x=document.getElementById(i);if(x)x.value=keep[i]}fuelLive();return}
-    const sh=S.shifts.find(z=>z.start===sheetState.editStart);if(sh){const r=shiftRev(sh),tp=shiftTip(sh);S.entries=S.entries.filter(e=>e!==r&&e!==tp&&e.shift!==sh.start);S.shifts=S.shifts.filter(x=>x!==sh)}
+    const sh=S.shifts.find(z=>z.start===sheetState.editStart);if(sh){report('изтрита',sh);const r=shiftRev(sh),tp=shiftTip(sh);S.entries=S.entries.filter(e=>e!==r&&e!==tp&&e.shift!==sh.start);S.shifts=S.shifts.filter(x=>x!==sh)}
     save();closeSheet();render();return}
   if(a==='back'){if(backFrom){period=backFrom.period;weekOff=backFrom.off;backFrom=null}render();return}
   if(a==='wprev'){weekOff--;render();return}
@@ -749,11 +767,12 @@ document.addEventListener('click',e=>{
     while(S.shifts.some(z=>z!==editing&&z.start===st))st+=60000;
     const en=st+Math.round(hours*3600000);
     if(editing){const r=shiftRev(editing),tp=shiftTip(editing);S.entries=S.entries.filter(e=>e!==r&&e!==tp);S.shifts=S.shifts.filter(z=>z!==editing)}
-    S.shifts.push({start:st,end:en,km:Math.round(km),fuel:Math.round(fuelAmt*100)/100,price,liters,auto,manual,orders});
+    const nsh={start:st,end:en,km:Math.round(km),fuel:Math.round(fuelAmt*100)/100,price,liters,auto,manual,orders,sid:(editing&&editing.sid)||newSid()};
+    S.shifts.push(nsh);
     if(revAmt>0){const amt=Math.round(revAmt*100)/100;S.entries.push({id:Date.now().toString(36),t:st,kind:'in',amt,comm:Math.round(amt*S.settings.comm)/100,cat:'Оборот за смяната',shift:st});}
     if(tipAmt>0)S.entries.push({id:Date.now().toString(36)+'t',t:st,kind:'in',amt:Math.round(tipAmt*100)/100,comm:0,cat:'Бакшиш',shift:st});
     if(sheetState.mode==='end')S.active=null;
-    save();closeSheet();render();
+    save();closeSheet();render();report(editing?'промяна':'нова',nsh);
   }
   if(a==='reset'){
     if(!resetArmed){resetArmed=true;render();return}
@@ -767,6 +786,7 @@ document.addEventListener('change',e=>{
     const amt=Math.round(n*100)/100;if(amt!==curRent()){const today=ymd(Date.now());S.settings.rentHist=S.settings.rentHist.filter(r=>r.from!==today);S.settings.rentHist.push({from:today,amt});save();render()}}
   if(e.target.id==='fuel'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.fuel=Math.round(n*1000)/1000;save();render()}else e.target.value=S.settings.fuel?String(S.settings.fuel).replace('.',','):''}
   if(e.target.id==='cons'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0&&n<50){S.settings.cons=Math.round(n*10)/10;save();render()}else e.target.value=S.settings.cons?String(S.settings.cons).replace('.',','):''}
+  if(e.target.id==='share'){S.settings.share=e.target.checked;save()}
   if(e.target.id==='comm'){const n=parse(e.target.value);if(n>=0&&n<=100){S.settings.comm=n;save()}else e.target.value=String(S.settings.comm).replace('.',',')}
   if(e.target.id==='amort'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.amort=n/100;save()}else e.target.value=S.settings.amort?String(Math.round(S.settings.amort*10000)/100).replace('.',','):''}
 });
