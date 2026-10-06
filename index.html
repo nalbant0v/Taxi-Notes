@@ -403,7 +403,7 @@ function statsBlock(k,curKeys,prevKeys,vsTxt,note){
   }
   const avg=rangeAgg(prev);
   cur.hours=dayMode?cur.hoursDay:cur.hoursTot; avg.hours=dayMode?avg.hoursDay:avg.hoursTot;
-  if(cur.hoursTot===null)return '';
+  const noShift=cur.hoursTot===null;
   const rows=[
     ['Отработени часове','hours',v=>hm(v*3600000),null,''],
     ['Оборот на час','grossH',v=>eur(v),true,''],
@@ -418,7 +418,7 @@ function statsBlock(k,curKeys,prevKeys,vsTxt,note){
     const p=Math.round((c-a)/Math.abs(a)*100);if(p===0)return `<small class="cmp">същото ${vsTxt}</small>`;
     const good=higherGood?p>0:p<0;return `<small class="cmp ${higherGood===null?'':good?'pos':'neg'}">${p>0?'▲ +'+p:'▼ −'+Math.abs(p)}% ${vsTxt}</small>`};
   return `<div class="stat-head"><h2>Статистика</h2>${dayMode?cmpToggle():''}</div>
-  <div class="list">${rows.map(([lbl,key,f,hg,miss])=>`<div class="row" data-info="${key}" role="button" tabindex="0"><div class="what">${lbl}</div><div class="amt num" style="text-align:right">${cur[key]===null?`<span style="color:var(--muted)">—</span>${miss?`<small class="cmp">${miss}</small>`:''}`:f(cur[key])+cmp(key,hg)}</div></div>`).join('')}</div>
+  <div class="list">${rows.map(([lbl,key,f,hg,miss])=>`<div class="row" data-info="${key}" role="button" tabindex="0"><div class="what">${lbl}</div><div class="amt num" style="text-align:right">${cur[key]===null?`<span style="color:var(--muted)">—</span>${noShift?'<small class="cmp">няма въведена смяна</small>':miss?`<small class="cmp">${miss}</small>`:''}`:f(cur[key])+cmp(key,hg)}</div></div>`).join('')}</div>
   ${avg.perH!==null||dayMode?`<p class="hint">${note}</p>`:''}`;
 }
 function dayBody(k,title,noShifts){
