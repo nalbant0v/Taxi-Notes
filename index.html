@@ -352,6 +352,7 @@ function rangeAgg(keys){
     perH:h>0.05?a.net/h:null,
     grossH:h>0.05?(a.inc+a.tip)/h:null,
     perOrder:a.orders?a.inc/a.orders:null,
+    perOrderNet:a.orders?a.net/a.orders:null,
     ordersH:a.orders&&h>0.05?a.orders/h:null,
     perKm:a.km?a.net/a.km:null,
     cons:LK?L/LK*100:null
@@ -370,7 +371,8 @@ const INFO={
   hours:['Отработени часове','Колко часа си работил.','Сборът от часовете на всички смени за периода.'],
   perH:['Чисто на час','Колко реално изкарваш за всеки отработен час. Най-важният показател.','Чиста печалба ÷ отработени часове.'],
   grossH:['Оборот на час','Колко пари минават през ръцете ти на час, преди удръжки.','(Оборот + бакшиш) ÷ отработени часове. Ако е много по-високо от чистото на час, разходите изяждат голяма част.'],
-  perOrder:['Средно на поръчка','Колко е средният курс.','Оборот ÷ брой поръчки. Ниско означава много кратки и евтини курсове.'],
+  perOrder:['Средно на поръчка','Колко е средният курс, преди удръжки.','Оборот ÷ брой поръчки. Ниско означава много кратки и евтини курсове.'],
+  perOrderNet:['Средно на поръчка (чисто)','Колко реално ти остава средно от всяка поръчка.','Чиста печалба ÷ брой поръчки. Показва колко от всеки курс остава за теб след комисионна, гориво, аренда и разходи.'],
   ordersH:['Поръчки на час','Колко натоварена е била смяната.','Брой поръчки ÷ отработени часове.'],
   perKm:['Чисто на километър','Колко печелиш за всеки изминат километър.','Чиста печалба ÷ изминати километри. Ако е ниско, вероятно си карал много празен.'],
   cons:['Разход на гориво','Колко литра гори колата на 100 км.','Изгорели литри ÷ изминати километри × 100. Литрите се смятат от горивото в € ÷ цената на литър. Ако разходът е взет от Настройки, тук ще виждаш същото число. Ако започне да расте без причина, колата може да има нужда от преглед.'],
@@ -382,7 +384,7 @@ function cmpInfo(key){
   const extra=key==='hours'?' При 7 или 30 дни часовете за деня се сравняват със средното на работен ден, а не с общия сбор.':'';
   return `<p class="info-how"><b>Сравнението</b> под числото показва как е денят спрямо избраното отдолу: предишния работен ден, или средното от работните ти дни за последните 7 или 30 дни. Почивните дни не се броят.${extra} ${color}</p>${cmpToggle()}`;
 }
-const STAT_KEYS=['hours','perH','grossH','perOrder','ordersH','perKm','cons'];
+const STAT_KEYS=['hours','perH','grossH','perOrder','perOrderNet','ordersH','perKm','cons'];
 function statsBlock(k,curKeys,prevKeys,vsTxt,note){
   const cur=rangeAgg(curKeys||new Set([k]));
   let prev=prevKeys;
@@ -399,21 +401,22 @@ function statsBlock(k,curKeys,prevKeys,vsTxt,note){
   }
   const avg=rangeAgg(prev);
   cur.hours=dayMode?cur.hoursDay:cur.hoursTot; avg.hours=dayMode?avg.hoursDay:avg.hoursTot;
+  if(cur.hoursTot===null)return '';
   const rows=[
-    ['Отработени часове','hours',v=>hm(v*3600000),null],
-    ['Чисто на час','perH',v=>eur(v),true],
-    ['Оборот на час','grossH',v=>eur(v),true],
-    ['Средно на поръчка','perOrder',v=>eur(v),true],
-    ['Поръчки на час','ordersH',v=>n1(v),true],
-    ['Чисто на километър','perKm',v=>eur(v),true],
-    ['Разход на гориво','cons',v=>n1(v)+' л/100 км',false],
-  ].filter(r=>cur[r[1]]!==null);
-  if(!rows.length)return '';
+    ['Отработени часове','hours',v=>hm(v*3600000),null,''],
+    ['Оборот на час','grossH',v=>eur(v),true,''],
+    ['Чисто на час','perH',v=>eur(v),true,''],
+    ['Поръчки на час','ordersH',v=>n1(v),true,'въведи брой поръчки в смяната'],
+    ['Чисто на километър','perKm',v=>eur(v),true,'въведи километри в смяната'],
+    ['Средно на поръчка','perOrder',v=>eur(v),true,'въведи брой поръчки в смяната'],
+    ['Средно на поръчка (чисто)','perOrderNet',v=>eur(v),true,'въведи брой поръчки в смяната'],
+    ['Разход на гориво','cons',v=>n1(v)+' л/100 км',false,'въведи километри и цена на литър'],
+  ];
   const cmp=(key,higherGood)=>{const c=cur[key],a=avg[key];if(c===null||a===null||a===0)return '';
     const p=Math.round((c-a)/Math.abs(a)*100);if(p===0)return `<small class="cmp">същото ${vsTxt}</small>`;
     const good=higherGood?p>0:p<0;return `<small class="cmp ${higherGood===null?'':good?'pos':'neg'}">${p>0?'▲ +'+p:'▼ −'+Math.abs(p)}% ${vsTxt}</small>`};
   return `<div class="stat-head"><h2>Статистика</h2>${dayMode?cmpToggle():''}</div>
-  <div class="list">${rows.map(([lbl,key,f,hg])=>`<div class="row" data-info="${key}" role="button" tabindex="0"><div class="what">${lbl}</div><div class="amt num" style="text-align:right">${f(cur[key])}${cmp(key,hg)}</div></div>`).join('')}</div>
+  <div class="list">${rows.map(([lbl,key,f,hg,miss])=>`<div class="row" data-info="${key}" role="button" tabindex="0"><div class="what">${lbl}</div><div class="amt num" style="text-align:right">${cur[key]===null?`<span style="color:var(--muted)">—</span>${miss?`<small class="cmp">${miss}</small>`:''}`:f(cur[key])+cmp(key,hg)}</div></div>`).join('')}</div>
   ${avg.perH!==null||dayMode?`<p class="hint">${note}</p>`:''}`;
 }
 function dayBody(k,title,noShifts){
