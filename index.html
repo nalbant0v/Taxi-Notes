@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Смяна — тефтер за таксиметров шофьор</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EDEC; --surface:#FFFFFF; --ink:#15212B; --muted:#5D6B74; --line:#D3DADB;
+  --amber:#F2B705; --amber-ink:#1A1400; --green:#1D7F55; --red:#B83E2A; --chip:#F2F4F4;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10171D; --surface:#1A232B; --ink:#E8EEF0; --muted:#93A1A9; --line:#2B3741;
+    --amber:#F5C21B; --amber-ink:#1A1400; --green:#43B985; --red:#E46A55; --chip:#232E37;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10171D; --surface:#1A232B; --ink:#E8EEF0; --muted:#93A1A9; --line:#2B3741;
+  --amber:#F5C21B; --amber-ink:#1A1400; --green:#43B985; --red:#E46A55; --chip:#232E37;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+main{max-width:520px;margin:0 auto;padding:16px 16px 110px}
+h1,h2{margin:0}
+h2{font-size:1.15rem;font-weight:600;margin:28px 0 10px}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+/* Hero: the one number a driver cares about */
+.hero{padding:8px 4px 4px}
+.hero .lbl{color:var(--muted);font-size:.95rem}
+.hero .big{font-size:clamp(3rem,15vw,4.4rem);font-weight:800;letter-spacing:-.03em;line-height:1.02;margin-top:2px}
+.hero .big small{font-size:.38em;font-weight:500;letter-spacing:0;color:var(--muted);margin-left:6px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-radius:14px;overflow:hidden;margin-top:16px}
+.stats div{background:var(--surface);padding:10px 8px}
+.stats div:last-child:nth-child(3n+1){grid-column:span 3}
+.stats div:last-child:nth-child(3n+2){grid-column:span 2}
+.stats span{display:block;font-size:.78rem;color:var(--muted)}
+.stats b{font-weight:600;font-size:1rem}
+.pos{color:var(--green)} .neg{color:var(--red)}
+
+.shift{margin-top:14px;width:100%;padding:14px 16px;border-radius:14px;border:2px solid var(--ink);display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.shift.center{justify-content:center;font-size:1.15rem;font-weight:800;background:var(--amber);color:var(--amber-ink);border-color:var(--amber);padding:18px 16px}
+.shift.on{border-color:var(--green);color:var(--green)}
+.shift .dot{width:10px;height:10px;border-radius:50%;background:currentColor;display:inline-block;margin-right:8px}
+.actions{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+.act{padding:16px 10px;border-radius:16px;font-size:1.2rem;font-weight:800}
+.act.ride{background:var(--amber);color:var(--amber-ink)}
+.act.exp{background:var(--surface);border:2px solid var(--line)}
+
+.list{background:var(--surface);border-radius:14px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .what{flex:1;min-width:0}
+.row .what small{display:block;color:var(--muted);font-size:.8rem}
+.row .amt{font-weight:600}
+.row .x{color:var(--muted);padding:6px 8px;font-size:1.1rem}
+.empty{color:var(--muted);padding:18px 14px}
+
+/* Week */
+.bars{display:flex;align-items:flex-end;gap:6px;height:170px;background:var(--surface);border-radius:14px;padding:14px 12px 8px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px;padding:0;border-radius:8px}
+.bar:disabled{opacity:.35;cursor:default}
+.bar .dn{font-size:.7rem}
+.bar i{display:block;width:100%;border-radius:6px 6px 2px 2px;background:var(--green);min-height:3px}
+.bar i.n{background:var(--red)}
+.bar span{font-size:.72rem;color:var(--muted)}
+.bar.today span{color:var(--ink);font-weight:600}
+.split .row b{font-weight:600}
+.meter{height:6px;background:var(--chip);border-radius:3px;margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--amber)}
+
+/* Deadlines */
+.due{display:flex;align-items:center;gap:12px;padding:14px;border-top:1px solid var(--line)}
+.due:first-child{border-top:0}
+.due .what{flex:1}
+.due .left{font-size:.85rem;color:var(--muted)}
+.due .left.warn{color:var(--amber);font-weight:600}
+.due .left.late{color:var(--red);font-weight:600}
+.due input{font:inherit;color:var(--ink);background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:8px}
+
+.field{display:block;margin:10px 0}
+.field span{display:block;font-size:1.02rem;font-weight:800;color:var(--ink);margin-bottom:6px}
+.field input{width:100%;font:inherit;font-size:1.1rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.danger{margin-top:24px;padding:12px 16px;border-radius:12px;border:1px solid var(--red);color:var(--red);font-weight:600}
+.note{color:var(--muted);font-size:.88rem}
+
+/* Bottom nav */
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav div{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav button{padding:14px 4px;font-size:.92rem;color:var(--muted);font-weight:500}
+nav button[aria-current="page"]{color:var(--ink);font-weight:800;box-shadow:inset 0 3px 0 var(--amber)}
+
+/* Sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:10}
+.scrim.open{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:11;background:var(--bg);border-radius:20px 20px 0 0;max-width:520px;margin:0 auto;transform:translateY(105%);transition:transform .22s ease-out;display:flex;flex-direction:column;max-height:calc(100vh - env(safe-area-inset-top,0px) - 12px);max-height:calc(100dvh - env(safe-area-inset-top,0px) - 12px)}
+.sheet-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 8px 0 16px;flex:none}
+.sheet-bar h3{margin:0;font-size:1.2rem}
+.close{display:flex;align-items:center;gap:6px;padding:10px 12px;border-radius:12px;font-weight:600;color:var(--ink);background:var(--chip);border:1px solid var(--line)}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet-body .field{margin:8px 0}
+.sheet-body .field input{padding:10px;font-size:1rem}
+.sheet-body .field span{font-size:.92rem;margin-bottom:4px}
+.sheet-body .note{margin:6px 0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pair .field,.times .field{min-width:0}
+.field input{min-width:0;-webkit-appearance:none;appearance:none}
+.sheet.open{transform:none}
+
+.amount{width:100%;font:inherit;font-size:2.6rem;font-weight:800;color:var(--ink);background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px 14px}
+.amount:focus{border-color:var(--amber);outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.chip{padding:10px 14px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-weight:500}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.go{width:100%;margin-top:16px;padding:16px;border-radius:14px;background:var(--amber);color:var(--amber-ink);font-weight:800;font-size:1.1rem}
+.link{display:block;margin:10px auto 0;padding:8px 12px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;font-size:.95rem}
+.times{display:grid;grid-template-columns:1fr;gap:0}
+.times .field input{font-size:1rem;padding:10px}
+.dayrow{width:100%;text-align:left}
+.dayrow .chev{color:var(--muted);font-size:1.4rem;padding-left:4px}
+.back{padding:10px 12px;margin:0 0 4px -4px;border-radius:12px;font-weight:600;color:var(--ink);background:var(--chip);border:1px solid var(--line)}
+.weeknav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.weeknav b{font-weight:600;text-align:center}
+.weeknav b span{display:block;font-weight:400;color:var(--muted);font-size:.85rem}
+.weeknav button{width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--line);font-size:1.4rem}
+.weeknav button:disabled{opacity:.35;cursor:default}
+.field input.need{border:2px solid var(--amber);background:color-mix(in srgb,var(--amber) 12%,var(--surface))}
+#fuelEur{font-weight:800}
+.hint{font-size:.78rem;color:var(--muted);margin:10px 0 0;line-height:1.4}
+.warn-t{color:var(--red)}
+.fixfuel{padding:8px 10px;border-radius:10px;background:var(--amber);color:var(--amber-ink);font-weight:600;font-size:.82rem}
+.edit{color:var(--ink);padding:6px 8px;font-size:1.1rem;border-radius:8px;background:var(--chip);border:1px solid var(--line)}
+.cmp{display:block;font-weight:400;font-size:.75rem;color:var(--muted)}
+.cmp.pos{color:var(--green)}.cmp.neg{color:var(--red)}
+.stat-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.seg{display:inline-flex;background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:2px;margin:28px 0 10px}
+.sheet .seg{margin:6px 0 4px}
+.seg button{padding:6px 12px;border-radius:8px;font-size:.88rem;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+[data-info]{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.stats [data-info]:active,.list [data-info]:active{background:var(--chip)}
+.hero[data-info]:active{opacity:.7}
+.info-what{font-size:1.05rem;margin:4px 0 10px}
+.info-how{color:var(--muted);margin:0 0 10px}
+.info-how b{color:var(--ink)}
+.period-bar{display:flex;justify-content:center}
+.period-bar .seg{margin:4px 0 10px}
+.back+.period-bar{margin-top:6px}
+.bars.month{gap:2px}
+.bars.month .bar{border-radius:3px}
+.shiftrow{cursor:pointer}.shiftrow:active{background:var(--chip)}
+.daynav{margin-bottom:2px;border-radius:14px;padding:4px}
+.daynav.past{background:color-mix(in srgb,var(--amber) 16%,transparent)}
+.totoday{display:block;margin:0 auto 6px;padding:6px 12px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:.85rem;font-weight:600}
+.delshift{width:100%;margin-top:12px}
+.oldlink{display:block;width:100%;margin-top:18px;padding:14px;border-radius:14px;border:1px dashed var(--line);color:var(--muted);font-weight:600;text-align:center}
+.err{color:var(--red);font-size:.9rem;min-height:1.2em;margin-top:6px}
+@media (prefers-reduced-motion:reduce){.sheet{transition:none}}
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<nav aria-label="Раздели"><div>
+  <button data-tab="today">Днес</button>
+  <button data-tab="week">Статистика</button>
+  <button data-tab="due">Срокове</button>
+  <button data-tab="set">Настройки</button>
+</div></nav>
+
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-bar"><h3 id="sheetTitle"></h3><button class="close" data-do="close" aria-label="Затвори">✕ Затвори</button></div>
+  <div class="sheet-body" id="sheetBody"></div>
+</div>
+
+<script>
+const KEY='smiana-v1';
+const SOURCES=['Улица','Диспечер','Bolt','Uber'];
+const PAYS=['В брой','Карта'];
+const EXPS=['Измиване','Храна','Ремонт','Друго'];
+const DEFAULT_DUE=[
+  {id:'d1',name:'Технически преглед',date:''},
+  {id:'d2',name:'Гражданска отговорност',date:''},
+  {id:'d3',name:'Винетка',date:''},
+  {id:'d4',name:'Смяна на масло',date:''},
+  {id:'d5',name:'Проверка на таксиметровия апарат',date:''}
+];
+function fresh(){return {entries:[],shifts:[],active:null,due:DEFAULT_DUE.map(d=>({...d})),settings:{amort:0,amortV:2,comm:0,commSrc:['Диспечер'],fuel:0,cons:0,rentHist:[]}}}
+function load(){try{const r=localStorage.getItem(KEY);if(r){const s=JSON.parse(r);return Object.assign(fresh(),s)}}catch(e){}return fresh()}
+let S=load();
+S.settings=Object.assign({amort:0,comm:0,commSrc:['Диспечер'],fuel:0,cons:0,rentHist:[]},S.settings);
+if(S.settings.amortV!==2){if(S.settings.amort===0.08)S.settings.amort=0;S.settings.amortV=2;}
+function cleanOrphans(){const st=new Set(S.shifts.map(z=>z.start));const before=S.entries.length;S.entries=S.entries.filter(e=>e.shift===undefined||st.has(e.shift));return S.entries.length!==before}
+if(cleanOrphans())save();
+const fuelCost=km=>Math.round(km*S.settings.cons/100*S.settings.fuel*100)/100;
+/* Storage: browser storage right away, plus the person's private row in Claude when available */
+let cloud=null, cloudState='local', writing=false, pending=false, timer=null;
+function save(){
+  S.updatedAt=Date.now();
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  if(cloud){clearTimeout(timer);timer=setTimeout(push,600)}
+}
+async function push(){
+  if(!cloud)return;
+  if(writing){pending=true;return}
+  writing=true;
+  try{await cloud.set(JSON.parse(JSON.stringify(S)));cloudState='cloud'}
+  catch(e){if(e&&e.code==='invalid_argument'){cloud=null;cloudState='local'}else cloudState='retry'}
+  writing=false;
+  if(pending){pending=false;push()}
+  if(tab==='set'&&!sheetState)render();
+}
+async function initCloud(){
+  try{
+    if(!window.claude||!window.claude.use)return;
+    const [db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]);
+    if(!db||!user)return;
+    const id=await user.id();
+    if(!id)return;
+    if(user.can&&(await user.can('data.write'))===false)return;
+    const ref=db.collection('data/users/'+id).doc('state');
+    const snap=await ref.get();
+    cloud=ref;
+    if(snap.exists){
+      const remote=snap.data();
+      if((remote.updatedAt||0)>(S.updatedAt||0)){
+        S=Object.assign(fresh(),remote);
+        S.settings=Object.assign({amort:0,comm:0,commSrc:['Диспечер'],fuel:0,cons:0,rentHist:[]},S.settings);
+        cleanOrphans();
+        try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+        cloudState='cloud';
+        if(!sheetState)render();
+        return;
+      }
+    }
+    await push();
+  }catch(e){cloud=null;cloudState='local'}
+}
+
+let mainOff=0;
+let tab='today', resetArmed=false, dayKey=null, weekOff=0, period='week', backFrom=null;
+const $=s=>document.querySelector(s);
+const eur=n=>(n<0?'−':'')+Math.abs(n).toLocaleString('bg-BG',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+const ymd=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const hm=ms=>{const m=Math.floor(ms/60000);return Math.floor(m/60)+' ч '+String(m%60).padStart(2,'0')+' мин'};
+const time=t=>new Date(t).toLocaleTimeString('bg-BG',{hour:'2-digit',minute:'2-digit'});
+
+function curRent(){const h=S.settings.rentHist;return h.length?h[h.length-1].amt:0}
+function dailyRent(k){
+  if(k>ymd(Date.now()))return 0;
+  let a=0;for(const r of S.settings.rentHist)if(r.from<=k)a=r.amt;
+  return Math.round(a/7*100)/100;
+}
+function consFor(keys){const sh=S.shifts.filter(x=>keys.has(ymd(x.start))&&x.liters&&x.km);const L=sh.reduce((a,x)=>a+x.liters,0),K=sh.reduce((a,x)=>a+x.km,0);return K?n1(L/K*100):'—'}
+function shiftTip(sh){return S.entries.find(e=>e.kind==='in'&&e.cat==='Бакшиш'&&e.shift===sh.start)||null}
+function shiftRev(sh){return S.entries.find(e=>e.kind==='in'&&e.cat!=='Бакшиш'&&(e.shift===sh.start||(e.shift===undefined&&e.cat==='Оборот за смяната'&&e.t===sh.start)))||null}
+function dayStats(key){
+  let inc=0,tip=0,out=0,ms=0,km=0,comm=0,fuel=0,orders=0;
+  for(const e of S.entries) if(ymd(e.t)===key){ if(e.kind==='in'){if(e.cat==='Бакшиш')tip+=e.amt;else{inc+=e.amt;comm+=e.comm||0}} else out+=e.amt; }
+  for(const s of S.shifts) if(ymd(s.start)===key){ ms+=s.end-s.start; km+=s.km||0; fuel+=s.fuel||0; orders+=s.orders||0; }
+  if(S.active && ymd(S.active.start)===key) ms+=Date.now()-S.active.start;
+  const amort=km*S.settings.amort;
+  const rent=dailyRent(key);
+  const net=inc+tip-comm-fuel-rent-out-amort;
+  const hours=ms/3600000;
+  return {inc,tip,orders,out,comm,fuel,rent,amort,net,ms,km,perH:hours>0.05?net/hours:null};
+}
+
+function shiftStats(s){
+  if(!s.end){const end=Date.now();let inc=0,out=0;
+    for(const e of S.entries) if(e.t>=s.start&&e.t<=end){ if(e.kind==='in')inc+=e.amt-(e.comm||0); else out+=e.amt; }
+    const net=inc-out-(s.fuel||0)-(s.km||0)*S.settings.amort;const h=(end-s.start)/3600000;return {net,perH:h>0?net/h:0}}
+  const k=ymd(s.start), d=dayStats(k), own=shiftRev(s);
+  const linked=new Set(S.shifts.filter(z=>ymd(z.start)===k).flatMap(z=>[shiftRev(z),shiftTip(z)]).filter(Boolean));const ot=shiftTip(s);
+  let freeIn=0,out=0;
+  for(const e of S.entries) if(ymd(e.t)===k){ if(e.kind==='in'){if(!linked.has(e))freeIn+=e.amt-(e.comm||0)} else out+=e.amt; }
+  const ms=s.end-s.start, share=d.ms>0?ms/d.ms:0;
+  const net=(own?own.amt-(own.comm||0):0)+(ot?ot.amt:0)-(s.fuel||0)-(s.km||0)*S.settings.amort+share*(freeIn-out-d.rent);
+  const h=ms/3600000;
+  return {net,perH:h>0?net/h:0};
+}
+
+function render(){
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===tab?'page':'false'));
+  const app=$('#app');
+  if(tab==='today') app.innerHTML=viewToday();
+  if(tab==='week') app.innerHTML=viewWeek();
+  if(tab==='due') app.innerHTML=viewDue();
+  if(tab==='set') app.innerHTML=viewSet();
+}
+
+const WD=['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'];
+const WDS=['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+const ML=['януари','февруари','март','април','май','юни','юли','август','септември','октомври','ноември','декември'];
+const dateLbl=k=>{const d=new Date(k+'T12:00');return d.getDate()+' '+ML[d.getMonth()]};
+function heroNet(d,lbl){
+  return `<section class="hero" data-info="net" role="button" tabindex="0"><div class="lbl">${lbl}</div><div class="big num ${d.net<0?'neg':''}">${eur(d.net)}</div></section>`;
+}
+function rangeAgg(keys){
+  const a={inc:0,net:0,ms:0,orders:0,km:0,tip:0,days:0};
+  for(const k of keys){const d=dayStats(k);if(!d.ms)continue;a.days++;a.inc+=d.inc;a.net+=d.net;a.ms+=d.ms;a.orders+=d.orders;a.km+=d.km;a.tip+=d.tip}
+  const sh=S.shifts.filter(x=>keys.has(ymd(x.start))&&x.liters&&x.km);
+  const L=sh.reduce((s,x)=>s+x.liters,0),LK=sh.reduce((s,x)=>s+x.km,0);
+  const h=a.ms/3600000;
+  return {
+    hoursDay:a.days?h/a.days:null, hoursTot:h>0?h:null,
+    perH:h>0.05?a.net/h:null,
+    grossH:h>0.05?(a.inc+a.tip)/h:null,
+    perOrder:a.orders?a.inc/a.orders:null,
+    ordersH:a.orders&&h>0.05?a.orders/h:null,
+    perKm:a.km?a.net/a.km:null,
+    cons:LK?L/LK*100:null
+  };
+}
+function cmpToggle(){const b=S.settings.cmpBase||'week';return `<div class="seg" role="group" aria-label="Сравнение с"><button data-cmp="day" aria-pressed="${b==='day'}">Ден</button><button data-cmp="week" aria-pressed="${b==='week'}">7 дни</button><button data-cmp="month" aria-pressed="${b==='month'}">30 дни</button></div>`}
+const INFO={
+  net:['Чиста печалба','Каквото ти остава за деня след всички удръжки.','Оборот + бакшиш − комисионна − гориво − аренда/лизинг − други разходи − амортизация.'],
+  inc:['Оборот','Сумата, която си взел от клиентите за деня, преди удръжки. Въвежда се при въвеждане на смяна.','Бакшишът не влиза тук, той се показва отделно.'],
+  tip:['Бакшиш','Парите, които клиентите са ти дали отгоре.','Изцяло твои са. От тях не се взима комисионна.'],
+  comm:['Комисионна','Делът, който таксиметровата фирма взима от оборота.','Оборот × процента комисионна от Настройки. Процентът се записва в момента на въвеждане на смяната, така че ако го промениш по-късно, старите смени не се преизчисляват. Не се смята върху бакшиша.'],
+  fuel:['Гориво','Колко е струвало горивото за деня.','Километри ÷ 100 × разход на 100 км × цена на литър. Пример: 180 км ÷ 100 × 6,5 л × 1,45 € = 16,97 €. Ако в смяната си въвел сумата за гориво ръчно, се взима тя.'],
+  rent:['Аренда/лизинг','Дневната част от седмичната аренда или лизинг на колата.','Сумата от Настройки ÷ 7. Брои се всеки ден, включително почивните, защото се плаща независимо дали работиш.'],
+  out:['Други разходи','Разходите, които си въвел сам с бутона „+ Разход“.','Например измиване, храна, ремонт и други. Горивото, арендата и комисионната са отделно.'],
+  amort:['Амортизация','Износването на колата: гуми, ремонти, обезценка.','Километри × сумата на километър от Настройки. Ако колата е под аренда, трябва да е 0.'],
+  hours:['Отработени часове','Колко часа си работил.','Сборът от часовете на всички смени за периода.'],
+  perH:['Чисто на час','Колко реално изкарваш за всеки отработен час. Най-важният показател.','Чиста печалба ÷ отработени часове.'],
+  grossH:['Оборот на час','Колко пари минават през ръцете ти на час, преди удръжки.','(Оборот + бакшиш) ÷ отработени часове. Ако е много по-високо от чистото на час, разходите изяждат голяма част.'],
+  perOrder:['Средно на поръчка','Колко е средният курс.','Оборот ÷ брой поръчки. Ниско означава много кратки и евтини курсове.'],
+  ordersH:['Поръчки на час','Колко натоварена е била смяната.','Брой поръчки ÷ отработени часове.'],
+  perKm:['Чисто на километър','Колко печелиш за всеки изминат километър.','Чиста печалба ÷ изминати километри. Ако е ниско, вероятно си карал много празен.'],
+  cons:['Разход на гориво','Колко литра гори колата на 100 км.','Изгорели литри ÷ изминати километри × 100. Литрите се смятат от горивото в € ÷ цената на литър. Ако разходът е взет от Настройки, тук ще виждаш същото число. Ако започне да расте без причина, колата може да има нужда от преглед.'],
+};
+function cmpInfo(key){
+  const color=key==='hours'?'Сравнението е в сиво, защото повече часове не означава непременно по-добре.':key==='cons'?'По-нисък разход е по-добре, затова намалението е в зелено, а увеличението в червено.':'Зелено означава по-добре, червено по-слабо.';
+  if(period!=='day'){const M=period==='month';
+    return `<p class="info-how"><b>Сравнението</b> под числото е с ${M?'миналия месец':'миналата седмица'}${key==='hours'?' (общият брой часове)':''}. ${color}</p>`}
+  const extra=key==='hours'?' При 7 или 30 дни часовете за деня се сравняват със средното на работен ден, а не с общия сбор.':'';
+  return `<p class="info-how"><b>Сравнението</b> под числото показва как е денят спрямо избраното отдолу: предишния работен ден, или средното от работните ти дни за последните 7 или 30 дни. Почивните дни не се броят.${extra} ${color}</p>${cmpToggle()}`;
+}
+const STAT_KEYS=['hours','perH','grossH','perOrder','ordersH','perKm','cons'];
+function statsBlock(k,curKeys,prevKeys,vsTxt,note){
+  const cur=rangeAgg(curKeys||new Set([k]));
+  let prev=prevKeys;
+  const dayMode=!prev, base=S.settings.cmpBase||'week';
+  if(!prev){prev=new Set();const b=new Date(k+'T12:00');
+    if(base==='day'){
+      for(let i=1;i<=60;i++){const t=new Date(b);t.setDate(b.getDate()-i);const kk=ymd(t);if(dayStats(kk).ms>0){prev.add(kk);break}}
+      vsTxt=vsTxt||'спрямо предишния работен ден';
+      note=note||(prev.size?`Сравнението е с предишния ти работен ден (${dateLbl([...prev][0])}). Натисни показател, за да видиш какво значи.`:'Няма предишен работен ден за сравнение.');
+    }else{const N=base==='month'?30:7;
+      for(let i=1;i<=N;i++){const t=new Date(b);t.setDate(b.getDate()-i);prev.add(ymd(t))}
+      vsTxt=vsTxt||`спрямо последните ${N} дни`;
+      note=note||`Сравнението е със средното от работните ти дни през последните ${N} дни. Натисни показател, за да видиш какво значи.`;}
+  }
+  const avg=rangeAgg(prev);
+  cur.hours=dayMode?cur.hoursDay:cur.hoursTot; avg.hours=dayMode?avg.hoursDay:avg.hoursTot;
+  const rows=[
+    ['Отработени часове','hours',v=>hm(v*3600000),null],
+    ['Чисто на час','perH',v=>eur(v),true],
+    ['Оборот на час','grossH',v=>eur(v),true],
+    ['Средно на поръчка','perOrder',v=>eur(v),true],
+    ['Поръчки на час','ordersH',v=>n1(v),true],
+    ['Чисто на километър','perKm',v=>eur(v),true],
+    ['Разход на гориво','cons',v=>n1(v)+' л/100 км',false],
+  ].filter(r=>cur[r[1]]!==null);
+  if(!rows.length)return '';
+  const cmp=(key,higherGood)=>{const c=cur[key],a=avg[key];if(c===null||a===null||a===0)return '';
+    const p=Math.round((c-a)/Math.abs(a)*100);if(p===0)return `<small class="cmp">същото ${vsTxt}</small>`;
+    const good=higherGood?p>0:p<0;return `<small class="cmp ${higherGood===null?'':good?'pos':'neg'}">${p>0?'▲ +'+p:'▼ −'+Math.abs(p)}% ${vsTxt}</small>`};
+  return `<div class="stat-head"><h2>Статистика</h2>${dayMode?cmpToggle():''}</div>
+  <div class="list">${rows.map(([lbl,key,f,hg])=>`<div class="row" data-info="${key}" role="button" tabindex="0"><div class="what">${lbl}</div><div class="amt num" style="text-align:right">${f(cur[key])}${cmp(key,hg)}</div></div>`).join('')}</div>
+  ${avg.perH!==null||dayMode?`<p class="hint">${note}</p>`:''}`;
+}
+function dayBody(k,title,noShifts){
+  const d=dayStats(k);
+  const owned=new Set(S.shifts.flatMap(z=>[shiftRev(z),shiftTip(z)]).filter(Boolean));
+  const ent=S.entries.filter(e=>ymd(e.t)===k&&!owned.has(e)&&e.shift===undefined).sort((a,b)=>b.t-a.t);
+  const rows=ent.length?ent.map(e=>`
+    <div class="row">
+      <div class="what">${e.cat}<small>${time(e.t)}${e.comm?', комисионна '+eur(e.comm):''}${e.liters?', '+String(e.liters).replace('.',',')+' л':''}</small></div>
+      <div class="amt num ${e.kind==='in'?'pos':'neg'}">${e.kind==='in'?'+':'−'}${eur(e.amt)}</div>
+      <button class="edit" data-editentry="${e.id}" aria-label="Промени записа">✎</button>
+      <button class="x" data-del="${e.id}" aria-label="Изтрий">×</button>
+    </div>`).join(''):`<div class="empty">Няма записи за този ден.</div>`;
+  const sh=S.shifts.filter(s=>ymd(s.start)===k).sort((a,b)=>b.start-a.start);
+  const shRows=sh.map(s=>{const ss=shiftStats(s);return `
+    <div class="row shiftrow" data-editrow="${s.start}" role="button" tabindex="0" aria-label="Промени смяната">
+      <div class="what">Смяна, ${hm(s.end-s.start)}<small>${s.orders?s.orders+' поръчки, ':''}${s.km?s.km+' км':'без километри'}${s.fuel?', гориво '+eur(s.fuel):s.km?', <span class="warn-t">горивото не е сметнато</span>':''}${s.liters&&s.km?', '+n1(s.liters/s.km*100)+' л/100 км':''}, чисто ${eur(ss.net)}</small></div>
+      <div class="amt num ${ss.perH<0?'neg':''}">${eur(ss.perH)}<small style="display:block;font-weight:400;color:var(--muted);font-size:.75rem;text-align:right">на час</small></div>
+      ${s.km&&!s.fuel&&autoFuel()?`<button class="fixfuel" data-refuel="${s.start}">Сметни гориво</button>`:''}
+      <button class="edit" data-editshift="${s.start}" aria-label="Промени смяната">✎</button>
+      <button class="x" data-delshift="${s.start}" aria-label="Изтрий смяната">×</button>
+    </div>`}).join('');
+  return {d,html:`
+  <div class="stats">
+    <div data-info="inc" role="button" tabindex="0"><span>Оборот</span><b class="num">${eur(d.inc)}</b></div>
+    ${d.tip>0?`<div data-info="tip" role="button" tabindex="0"><span>Бакшиш</span><b class="num">${eur(d.tip)}</b></div>`:''}
+    <div data-info="comm" role="button" tabindex="0"><span>Комисионна</span><b class="num">${eur(d.comm)}</b></div>
+    <div data-info="fuel" role="button" tabindex="0"><span>Гориво</span><b class="num">${eur(d.fuel)}</b></div>
+    <div data-info="rent" role="button" tabindex="0"><span>Аренда/лизинг</span><b class="num">${eur(d.rent)}</b></div>
+    <div data-info="out" role="button" tabindex="0"><span>Други разходи</span><b class="num">${eur(d.out)}</b></div>
+    ${d.amort>0?`<div data-info="amort" role="button" tabindex="0"><span>Амортизация</span><b class="num">${eur(d.amort)}</b></div>`:''}
+  </div>
+  @@ACTIONS@@
+  ${sh.length&&!noShifts?`<h2>Смени ${title}</h2><div class="list">${shRows}</div>`:''}
+  ${ent.length?`<h2>Други записи</h2><div class="list">${rows}</div>`:''}
+  ${!sh.length&&!ent.length&&!noShifts?`<p class="note" style="margin-top:20px">Няма въведени смени ${title}.</p>`:''}
+`};
+}
+
+function viewToday(){
+  const td=new Date();td.setHours(12,0,0,0);td.setDate(td.getDate()+mainOff);
+  const k=ymd(td), isToday=mainOff===0;
+  const name=isToday?'днес':mainOff===-1?'вчера':dateLbl(k);
+  const {d,html}=dayBody(k,isToday?'днес':'за деня',true);
+  const shiftBtn=S.active&&isToday
+    ? `<button class="shift on" data-do="end"><span><i class="dot"></i>От ${time(S.active.start)}, ${eur(shiftStats(S.active).perH)}/ч</span><span>Приключи</span></button>`
+    : (()=>{const ex=S.shifts.filter(z=>ymd(z.start)===k).sort((a,b)=>b.start-a.start)[0];
+       return ex?`<button class="shift center" data-editshift="${ex.start}">✎ Промени смяната</button>`:`<button class="shift center" data-do="manualday" data-date="${k}">+ Въведи смяна</button>`})();
+  const actions=`${shiftBtn}
+  <div class="actions">
+    <button class="act exp" data-do="exp">+ Разход</button>
+  </div>`;
+  const nav=`<div class="weeknav daynav ${isToday?'':'past'}">
+    <button data-do="mprev" aria-label="Предишен ден">‹</button>
+    <b>${isToday?'Днес':mainOff===-1?'Вчера':WD[td.getDay()]} <span>${WD[td.getDay()].toLowerCase()}, ${dateLbl(k)}</span></b>
+    ${isToday?'<button data-do="mnext" disabled aria-label="Следващ ден">›</button>':'<button data-do="mnext" aria-label="Следващ ден">›</button>'}
+  </div>`;
+  return nav+heroNet(d,'Чиста печалба '+(isToday?'днес':mainOff===-1?'вчера':'за деня'))+html.replace('@@ACTIONS@@',actions);
+}
+
+function periodBar(){return `<div class="period-bar"><div class="seg" role="group" aria-label="Период"><button data-period="day" aria-pressed="${period==='day'}">Ден</button><button data-period="week" aria-pressed="${period==='week'}">Седмица</button><button data-period="month" aria-pressed="${period==='month'}">Месец</button></div></div>`}
+function viewDay(){
+  const t=new Date();t.setHours(12,0,0,0);t.setDate(t.getDate()+weekOff);const k=ymd(t);
+  const {d,html}=dayBody(k,'за деня');
+  const w=t.getDay();
+  const title=weekOff===0?'Днес':weekOff===-1?'Вчера':WD[w];
+  return `${backFrom?`<button class="back" data-do="back">‹ ${backFrom.period==='month'?'Месец':'Седмица'}</button>`:''}
+  ${periodBar()}
+  <div class="weeknav">
+    <button data-do="wprev" aria-label="Предишен ден">‹</button>
+    <b>${title} <span>${weekOff<-1?'':WD[w].toLowerCase()+', '}${dateLbl(k)}</span></b>
+    <button data-do="wnext" ${weekOff>=0?'disabled':''} aria-label="Следващ ден">›</button>
+  </div>
+  ${heroNet(d,'Чиста печалба за деня')}
+  ${html.replace('@@ACTIONS@@',statsBlock(k))}
+  ${S.shifts.some(z=>ymd(z.start)===k)?'<p class="hint">Натисни смяната, за да я промениш.</p>':`<button class="oldlink" data-do="manualday" data-date="${k}">+ Въведи смяна за ${weekOff===0?'днес':dateLbl(k)}</button>`}`;
+}
+
+function weekStart(off){
+  const d=new Date();d.setHours(12,0,0,0);
+  const back=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-back+off*7);
+  return d;
+}
+function monthStart(off){const d=new Date();d.setHours(12,0,0,0);d.setDate(1);d.setMonth(d.getMonth()+off);return d}
+function periodDays(per,off){
+  const out=[];
+  if(per==='month'){const s=monthStart(off);const m=s.getMonth();const t=new Date(s);while(t.getMonth()===m){out.push(ymd(t));t.setDate(t.getDate()+1)}}
+  else{const s=weekStart(off);for(let i=0;i<7;i++){const t=new Date(s);t.setDate(s.getDate()+i);out.push(ymd(t))}}
+  return out;
+}
+function viewWeek(){
+  if(period==='day')return viewDay();
+  const M=period==='month', todayK=ymd(Date.now());
+  const days=periodDays(period,weekOff).map(k=>{const t=new Date(k+'T12:00');return {k,t:t.getTime(),future:k>todayK,...dayStats(k)}});
+  const max=Math.max(1,...days.map(d=>Math.abs(d.net)));
+  const bars=days.map(d=>`<button class="bar ${d.k===todayK?'today':''}" ${d.future?'disabled':''} data-day="${d.k}" aria-label="${WD[new Date(d.t).getDay()]}, ${dateLbl(d.k)}"><i class="${d.net<0?'n':''}" style="height:${d.future?0:Math.round(Math.abs(d.net)/max*100)}%"></i>${M?'':`<span>${WDS[new Date(d.t).getDay()]}</span><span class="dn">${new Date(d.t).getDate()}</span>`}</button>`).join('');
+  const listDays=days.filter(d=>!d.future&&(!M||d.ms||d.k===todayK)).reverse();
+  const dayRows=listDays.map(d=>`
+    <button class="row dayrow" data-day="${d.k}">
+      <div class="what">${WD[new Date(d.t).getDay()]}<small>${dateLbl(d.k)}${d.ms?', '+hm(d.ms):', почивен'}</small></div>
+      <div class="amt num ${d.net<0?'neg':''}">${eur(d.net)}${d.perH!==null?`<small style="display:block;font-weight:400;color:var(--muted);font-size:.75rem;text-align:right">${eur(d.perH)}/ч</small>`:''}</div>
+      <span class="chev">›</span>
+    </button>`).join('')||`<div class="empty">Няма работни дни в този период.</div>`;
+  const tot=days.reduce((a,d)=>({inc:a.inc+d.inc,tip:a.tip+d.tip,comm:a.comm+d.comm,fuel:a.fuel+d.fuel,rent:a.rent+d.rent,out:a.out+d.out,amort:a.amort+d.amort,net:a.net+d.net}),{inc:0,tip:0,comm:0,fuel:0,rent:0,out:0,amort:0,net:0});
+  const keys=new Set(days.map(d=>d.k));
+  const wk=S.entries.filter(e=>keys.has(ymd(e.t)));
+  const group=(kind,list)=>{const m={};for(const e of wk)if(e.kind===kind)m[e.cat]=(m[e.cat]||0)+e.amt;if(kind==='out'){m['Гориво']=(m['Гориво']||0)+tot.fuel;m['Амортизация']=tot.amort;m['Аренда/лизинг']=tot.rent}
+    const sum=Object.values(m).reduce((a,b)=>a+b,0);
+    const rows=list.filter(c=>m[c]).sort((a,b)=>m[b]-m[a]).map(c=>`<div class="row"><div class="what">${c}<div class="meter"><i style="width:${Math.round(m[c]/sum*100)}%"></i></div></div><b class="num">${eur(m[c])}</b></div>`).join('');
+    return rows||`<div class="empty">Няма разходи за този период.</div>`;};
+  const MS=['яну','фев','мар','апр','май','юни','юли','авг','сеп','окт','ное','дек'];
+  const MN=['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
+  let title,sub;
+  if(M){const s=monthStart(weekOff);title=weekOff===0?'Този месец':weekOff===-1?'Миналия месец':MN[s.getMonth()];sub=MN[s.getMonth()]+' '+s.getFullYear()}
+  else{const s=weekStart(weekOff),e=new Date(s);e.setDate(s.getDate()+6);title=weekOff===0?'Тази седмица':weekOff===-1?'Миналата седмица':'Седмица';
+    sub=`${s.getDate()}${s.getMonth()!==e.getMonth()?' '+MS[s.getMonth()]:''} – ${e.getDate()} ${MS[e.getMonth()]}`}
+  const prevKeys=new Set(periodDays(period,weekOff-1));
+  return `
+  ${periodBar()}
+  <div class="weeknav">
+    <button data-do="wprev" aria-label="${M?'Предишен месец':'Предишна седмица'}">‹</button>
+    <b>${title} <span>${sub}</span></b>
+    <button data-do="wnext" ${weekOff>=0?'disabled':''} aria-label="${M?'Следващ месец':'Следваща седмица'}">›</button>
+  </div>
+  <section class="hero">
+    <div class="lbl">Чиста печалба за ${M?'месеца':'седмицата'}</div>
+    <div class="big num ${tot.net<0?'neg':''}">${eur(tot.net)}</div>
+  </section>
+  <div class="stats">
+    <div><span>Оборот</span><b class="num">${eur(tot.inc)}</b></div>
+    ${tot.tip>0?`<div><span>Бакшиш</span><b class="num">${eur(tot.tip)}</b></div>`:''}
+    <div><span>Комисионна</span><b class="num">${eur(tot.comm)}</b></div>
+    <div><span>Гориво</span><b class="num">${eur(tot.fuel)}</b></div>
+    <div><span>Аренда/лизинг</span><b class="num">${eur(tot.rent)}</b></div>
+    <div><span>Други разходи</span><b class="num">${eur(tot.out)}</b></div>
+    ${tot.amort>0?`<div><span>Амортизация</span><b class="num">${eur(tot.amort)}</b></div>`:''}
+  </div>
+  ${statsBlock(null,keys,prevKeys,M?'спрямо миналия месец':'спрямо миналата седмица',M?'Сравнението е с предишния месец.':'Сравнението е с предишната седмица.')}
+  <h2>За какво отиват</h2>
+  <div class="list split">${group('out',['Аренда/лизинг','Гориво','Амортизация',...EXPS])}</div>
+  <h2>По дни</h2>
+  <div class="bars ${M?'month':''}">${bars}</div>
+  <p class="note">Натисни ден, за да видиш детайлите или да поправиш смяна.</p>
+  <div class="list">${dayRows}</div>`;
+}
+
+function viewDue(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const rows=S.due.map(d=>{
+    let left='<span class="left">Няма зададена дата</span>';
+    if(d.date){const n=Math.round((new Date(d.date+'T00:00')-now)/86400000);
+      left=n<0?`<span class="left late">Изтекло преди ${-n} дни</span>`:n===0?`<span class="left late">Изтича днес</span>`:
+        `<span class="left ${n<=30?'warn':''}">След ${n} ${n===1?'ден':'дни'}</span>`;}
+    return `<div class="due"><div class="what">${d.name}<br>${left}</div><input type="date" value="${d.date}" data-due="${d.id}" aria-label="Дата за ${d.name}"></div>`;
+  }).join('');
+  const soon=S.due.filter(d=>d.date&&(new Date(d.date+'T00:00')-now)/86400000<=30).length;
+  return `
+  <section class="hero">
+    <div class="lbl">Изтичат до 30 дни</div>
+    <div class="big num ${soon?'':''}">${soon}</div>
+  </section>
+  <h2>Срокове</h2>
+  <div class="list">${rows}</div>
+  <p class="note">Сроковете до 30 дни се оцветяват, изтеклите са в червено.</p>`;
+}
+
+function viewSet(){
+  return `
+  <h2 style="margin-top:8px">Настройки</h2>
+  <label class="field"><span>Комисионна на фирмата, % от поръчката</span>
+    <input type="text" inputmode="decimal" id="comm" value="${String(S.settings.comm).replace('.',',')}"></label>
+  <p class="note">Смята се за всеки записан курс, в момента на записване. Ако го промениш, старите курсове остават със стария процент.</p>
+  <label class="field"><span>Седмична аренда/лизинг на колата, €</span>
+    <input type="text" inputmode="decimal" id="rent" value="${curRent()?String(curRent()).replace('.',','):''}"></label>
+  <p class="note">${curRent()?`Това е ${eur(curRent()/7)} на ден. `:''}Разделя се на 7 и се записва като разход „Аренда/лизинг“ всеки ден, включително в почивните. Ако я промениш, новата сума важи от днес нататък.</p>
+  <label class="field"><span>Цена на горивото, € на литър</span>
+    <input type="text" inputmode="decimal" id="fuel" value="${S.settings.fuel?String(S.settings.fuel).replace('.',','):''}"></label>
+  <label class="field"><span>Разход на колата, л/100 км</span>
+    <input type="text" inputmode="decimal" id="cons" value="${S.settings.cons?String(S.settings.cons).replace('.',','):''}"></label>
+  <p class="note">Каквото е попълнено тук, не се пита при въвеждане на смяна. Каквото е празно, ще се въвежда при всяка смяна. Горивото се смята от километрите.</p>
+  <label class="field"><span>Амортизация на колата, € на километър</span>
+    <input type="text" inputmode="decimal" id="amort" value="${String(S.settings.amort).replace('.',',')}"></label>
+  <p class="note"><b>Ако колата е под аренда, попълни 0</b>, защото тези разходи са включени в арендата. Ако колата е твоя, това са гуми, ремонти и обезценка, разделени на изминатите километри. За повечето коли е между 0,05 и 0,15 €.</p>
+  <p class="note">${cloudState==='cloud'?'✓ Данните се пазят в профила ти в Claude и остават след затваряне на приложението. Никой друг не ги вижда.':cloudState==='retry'?'Последното записване в профила ти не мина. Ще опитаме отново при следващата промяна.':'Данните се пазят само на това устройство. Ако приложението изчисти паметта си, може да се загубят.'}</p>
+  <button class="danger" data-do="reset">${resetArmed?'Натисни пак, за да изтриеш всичко':'Изтрий всички данни'}</button>`;
+}
+
+/* Sheet */
+let sheetState=null;
+function openSheet(mode,extra){
+  sheetState=Object.assign({mode,cat:mode==='rev'?'Оборот':EXPS[0]},extra||{});
+  drawSheet();
+  $('#scrim').classList.add('open');$('#sheet').classList.add('open');
+  upd();
+  $('#sheetBody').scrollTop=0;
+  if(mode==='end'||mode==='manual'||mode==='edit')fuelLive();
+  if(mode==='rev'||mode==='exp')setTimeout(()=>{const i=$('#amt');i&&i.focus()},230);
+}
+function closeSheet(){$('#scrim').classList.remove('open');$('#sheet').classList.remove('open');sheetState=null}
+function chips(list,cur,attr){return `<div class="chips">${list.map(c=>`<button class="chip" data-${attr}="${c}" aria-pressed="${c===cur}">${c}</button>`).join('')}</div>`}
+function drawSheet(){
+  const titles={rev:'Оборот',exp:'Нов разход',end:'Приключване на смяната',manual:'Въвеждане на смяна',edit:'Промяна на смяна',editEntry:'Промяна на запис',info:(INFO[sheetState.info]||[''])[0]};
+  $('#sheetTitle').textContent=titles[sheetState.mode]||'';
+  const s=sheetState,el=$('#sheetBody');
+  if(s.mode==='rev') el.innerHTML=`<input class="amount num" id="amt" inputmode="decimal" aria-label="Оборот">
+    <label class="field"><span>За дата</span><input type="date" id="revDate" value="${ymd(Date.now())}" max="${ymd(Date.now())}"></label>
+    ${S.settings.comm>0?`<p class="note" id="calc"></p>`:''}
+    <div class="err" id="err"></div><button class="go" data-do="save">Запиши оборота</button>`;
+  if(s.mode==='info'){
+    const [,what,how]=INFO[s.info];const st=STAT_KEYS.includes(s.info);
+    el.innerHTML=`<p class="info-what">${what}</p><p class="info-how"><b>Как се смята:</b> ${how}</p>
+    ${st?cmpInfo(s.info):''}
+    <button class="go" data-do="close">Разбрах</button>`;
+  }
+  if(s.mode==='editEntry'){
+    const e=S.entries.find(x=>x.id===s.editId);
+    const linked=e.kind==='in'&&(e.shift!==undefined||e.cat==='Оборот за смяната');
+    const cats=e.kind==='out'?(EXPS.includes(e.cat)?EXPS:[...EXPS,e.cat]):[];
+    el.innerHTML=`<p class="note">${e.kind==='in'?(linked?'Оборот към смяна':'Оборот'):'Разход'}</p>
+    <input class="amount num" id="amt" inputmode="decimal" aria-label="Сума" value="${String(e.amt).replace('.',',')}">
+    ${linked?'':`<label class="field"><span>Дата</span><input type="date" id="eDate" value="${s.eDate||ymd(e.t)}" max="${ymd(Date.now())}"></label>`}
+    ${cats.length?chips(cats,s.cat,'cat'):''}
+    <div class="err" id="err"></div><button class="go" data-do="saveEntry">Запази промените</button>`;
+  }
+  if(s.mode==='exp'){
+    const L=litersMode();
+    el.innerHTML=`<input class="amount num" id="amt" inputmode="decimal" aria-label="${L?'Литри':'Сума'}">
+    ${L?`<p class="note" id="calc">${calcText(0)}</p>`:''}
+    ${chips(EXPS,s.cat,'cat')}
+    <div class="err" id="err"></div><button class="go" data-do="save">Запиши разхода</button>`;
+  }
+  if(s.mode==='end'||s.mode==='manual'||s.mode==='edit'){
+    const end=s.mode==='end';
+    const ed=s.mode==='edit'?S.shifts.find(z=>z.start===s.editStart):null;
+    const er=ed?shiftRev(ed):null, et=ed?shiftTip(ed):null;
+    const fmt=v=>v?String(Math.round(v*100)/100).replace('.',','):'';
+    const st=ed?ed.start:end?S.active.start:s.presetDate?new Date(s.presetDate+'T12:00').getTime():Date.now();
+    const en=ed?ed.end:Date.now();
+    const hrs=ed||end?Math.round((en-st)/360000)/10:'';
+    el.innerHTML=`<div class="pair">
+      <label class="field"><span>Дата</span><input type="date" id="sDate" value="${ymd(st)}" max="${ymd(Date.now())}"></label>
+      <label class="field"><span>Отработени часове</span><input id="sHours" class="num" inputmode="decimal" value="${hrs?String(hrs).replace('.',','):''}"></label>
+    </div>
+    <div class="pair">
+      <label class="field"><span>Оборот, €</span>
+        <input id="rev" class="num" inputmode="decimal" value="${er?fmt(er.amt):''}"></label>
+      <label class="field"><span>Бакшиш, €</span>
+        <input id="tip" class="num" inputmode="decimal" value="${et?fmt(et.amt):''}"></label>
+    </div>
+    <div class="pair">
+      <label class="field"><span>Километри</span>
+        <input id="km" class="num" inputmode="numeric" value="${ed&&ed.km?ed.km:''}"></label>
+      <label class="field"><span>Брой поръчки</span>
+        <input id="orders" class="num" inputmode="numeric" value="${ed&&ed.orders?ed.orders:''}"></label>
+    </div>
+    ${autoFuel()&&!(ed&&ed.manual)?'':`<label class="field"><span>Гориво, € (ако знаеш точната сума)</span>
+      <input id="fuelManual" class="num" inputmode="decimal" value="${ed&&ed.manual?fmt(ed.fuel):''}"></label>`}
+    ${!(S.settings.fuel>0)||!(S.settings.cons>0)?`<div class="pair">
+      ${S.settings.fuel>0?'':`<label class="field"><span>Цена на литър, €</span>
+        <input id="fuelPrice" class="num" inputmode="decimal" value="${ed?fmt(ed.price):''}"></label>`}
+      ${S.settings.cons>0?'':`<label class="field"><span>Разход, л/100 км</span>
+        <input id="consIn" class="num" inputmode="decimal" value="${ed&&ed.km&&ed.liters?fmt(Math.round(ed.liters/ed.km*1000)/10):''}"></label>`}
+    </div>`:''}
+    <p class="note" id="autoFuel"></p>
+    <div class="err" id="err"></div>
+    <button class="go" data-do="saveShift">${ed?'Запази промените':end?'Приключи смяната':'Запиши смяната'}</button>
+    ${ed?`<button class="danger delshift" data-do="delEdit">${s.delArmed?'Натисни пак, за да изтриеш смяната':'Изтрий смяната'}</button>`:''}
+    <p class="hint">${autoFuel()?`Цената на литър (${eur(S.settings.fuel)}) и разходът (${n1(S.settings.cons)} л/100 км) се взимат от Настройки. Ако искаш винаги да ги въвеждаш ръчно, изтрий ги от Настройки.`:(S.settings.fuel>0||S.settings.cons>0)?`${S.settings.fuel>0?'Цената на литър се взима от Настройки':'Разходът на 100 км се взима от Настройки'}. Ако искаш винаги да ${S.settings.fuel>0?'я':'го'} въвеждаш ръчно, изтрий ${S.settings.fuel>0?'я':'го'} от Настройки.`:'Съвет: задай цената на литър и разхода на 100 км в Настройки. Тогава горивото ще се смята само и няма да ги въвеждаш при всяка смяна.'}</p>`;
+  }
+}
+const toInput=t=>{const d=new Date(t);return ymd(t)+'T'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const fromInput=v=>v?new Date(v).getTime():NaN;
+function litersMode(){return sheetState&&sheetState.mode==='exp'&&sheetState.cat==='Гориво'&&S.settings.fuel>0&&!sheetState.byAmount}
+function calcText(l){return `${String(l||0).replace('.',',')} л × ${eur(S.settings.fuel)} = <b>${eur((l||0)*S.settings.fuel)}</b>`}
+const parse=v=>parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button');
+  if(e.target.id==='scrim'){closeSheet();return}
+  if(t&&t.dataset.period){period=t.dataset.period;weekOff=0;backFrom=null;render();return}
+  if(t&&t.dataset.cmp){S.settings.cmpBase=t.dataset.cmp;save();if(sheetState)drawSheet();render();return}
+  const er=!t&&e.target.closest('[data-editrow]');
+  if(er){openSheet('edit',{editStart:Number(er.dataset.editrow)});return}
+  const inf=!t&&e.target.closest('[data-info]');
+  if(inf&&INFO[inf.dataset.info]){openSheet('info',{info:inf.dataset.info});return}
+  if(!t)return;
+  if(t.dataset.tab){if(t.dataset.tab==='today')mainOff=0;tab=t.dataset.tab;resetArmed=false;dayKey=null;backFrom=null;if(tab!=='week')weekOff=0;render();window.scrollTo(0,0);return}
+  if(t.dataset.cat&&sheetState){const before=litersMode();sheetState.cat=t.dataset.cat;const v=$('#amt').value;const de=document.getElementById('eDate');if(de)sheetState.eDate=de.value;drawSheet();if(before===litersMode()){$('#amt').value=v;upd()}return}
+  if(t.dataset.pay&&sheetState){sheetState.pay=t.dataset.pay;const v=$('#amt').value;drawSheet();$('#amt').value=v;return}
+  if(t.dataset.commsrc){const c=t.dataset.commsrc,l=S.settings.commSrc;S.settings.commSrc=l.includes(c)?l.filter(x=>x!==c):[...l,c];save();render();return}
+  if(t.dataset.day){backFrom={period,off:weekOff};const a0=new Date();a0.setHours(12,0,0,0);const b0=new Date(t.dataset.day+'T12:00');period='day';weekOff=Math.round((b0-a0)/86400000);render();window.scrollTo(0,0);return}
+  if(t.dataset.refuel){const sh=S.shifts.find(z=>String(z.start)===t.dataset.refuel);if(sh&&autoFuel()){sh.liters=Math.round(sh.km*S.settings.cons)/100;sh.price=S.settings.fuel;sh.fuel=Math.round(sh.liters*sh.price*100)/100;save();render()}return}
+  if(t.dataset.editentry){const e=S.entries.find(x=>x.id===t.dataset.editentry);if(e)openSheet('editEntry',{editId:e.id,cat:e.cat});return}
+  if(t.dataset.editshift){openSheet('edit',{editStart:Number(t.dataset.editshift)});return}
+  if(t.dataset.delshift){const sh=S.shifts.find(x=>String(x.start)===t.dataset.delshift);if(sh){const r=shiftRev(sh),tp=shiftTip(sh);S.entries=S.entries.filter(e=>e!==r&&e!==tp&&e.shift!==sh.start);S.shifts=S.shifts.filter(x=>x!==sh)}save();render();return}
+  if(t.dataset.del){S.entries=S.entries.filter(x=>x.id!==t.dataset.del);save();render();return}
+  const a=t.dataset.do;
+  if(a==='close'){closeSheet();return}
+  if(a==='delEdit'){if(!sheetState.delArmed){sheetState.delArmed=true;const keep={};['sDate','sHours','rev','tip','km','orders','fuelManual','fuelPrice','consIn'].forEach(i=>{const x=document.getElementById(i);if(x)keep[i]=x.value});drawSheet();for(const i in keep){const x=document.getElementById(i);if(x)x.value=keep[i]}fuelLive();return}
+    const sh=S.shifts.find(z=>z.start===sheetState.editStart);if(sh){const r=shiftRev(sh),tp=shiftTip(sh);S.entries=S.entries.filter(e=>e!==r&&e!==tp&&e.shift!==sh.start);S.shifts=S.shifts.filter(x=>x!==sh)}
+    save();closeSheet();render();return}
+  if(a==='back'){if(backFrom){period=backFrom.period;weekOff=backFrom.off;backFrom=null}render();return}
+  if(a==='wprev'){weekOff--;render();return}
+  if(a==='wnext'){if(weekOff<0)weekOff++;render();return}
+  if(a==='end')openSheet('end');
+  if(a==='rev')openSheet(a);
+  if(a==='exp'){const td=new Date();td.setHours(12,0,0,0);td.setDate(td.getDate()+(tab==='today'?mainOff:0));openSheet('exp',{presetDate:ymd(td)});return}
+  if(a==='mprev'){mainOff--;render();return}
+  if(a==='mnext'){if(mainOff<0)mainOff++;render();return}
+  if(a==='mtoday'){mainOff=0;render();return}
+  if(a==='save'){
+    const L=litersMode();
+    const raw=parse($('#amt').value);
+    if(!(raw>0)){$('#err').textContent=L?'Въведи литри, повече от нула.':'Въведи сума, по-голяма от нула.';return}
+    const n=L?raw*S.settings.fuel:raw;
+    const rev=sheetState.mode==='rev';
+    const amt=Math.round(n*100)/100;
+    let t=Date.now();
+    if(!rev&&sheetState.presetDate&&sheetState.presetDate!==ymd(t))t=new Date(sheetState.presetDate+'T12:00').getTime();
+    if(rev){const d=$('#revDate').value;if(!d){$('#err').textContent='Избери дата.';return}
+      if(d!==ymd(t))t=new Date(d+'T12:00').getTime();}
+    const comm=rev?Math.round(amt*S.settings.comm)/100:0;
+    S.entries.push({id:Date.now().toString(36),t,kind:rev?'in':'out',amt,comm,cat:sheetState.cat,liters:L?raw:0});
+    save();closeSheet();render();
+  }
+  if(a==='unit'){sheetState.byAmount=!sheetState.byAmount;drawSheet();$('#amt').focus();return}
+  if(a==='saveEntry'){
+    const e=S.entries.find(x=>x.id===sheetState.editId);if(!e){closeSheet();return}
+    const n=parse($('#amt').value);
+    if(!(n>0)){$('#err').textContent='Въведи сума, по-голяма от нула.';return}
+    const de=document.getElementById('eDate');
+    if(de){if(!de.value){$('#err').textContent='Избери дата.';return}
+      if(de.value!==ymd(e.t))e.t=de.value===ymd(Date.now())?Date.now():new Date(de.value+'T12:00').getTime();}
+    const amt=Math.round(n*100)/100;
+    if(e.kind==='in'){const rate=e.amt>0&&e.comm!==undefined?e.comm/e.amt:S.settings.comm/100;e.comm=Math.round(amt*rate*100)/100}
+    else e.cat=sheetState.cat;
+    e.amt=amt;
+    save();closeSheet();render();
+  }
+  if(a==='manual')openSheet('manual');
+  if(a==='manualday'){openSheet('manual',{presetDate:t.dataset.date});return}
+  if(a==='saveShift'){
+    const dv=$('#sDate').value, hv=$('#sHours').value.trim(), hours=hv===''?NaN:parse(hv);
+    const raw=$('#km').value.trim();const km=raw===''?0:parse(raw);
+    const rv=$('#rev').value.trim();const revAmt=rv===''?0:parse(rv);
+    const err=$('#err');
+    if(!dv){err.textContent='Избери дата.';return}
+    if(dv>ymd(Date.now())){err.textContent='Датата не може да е в бъдещето.';return}
+    if(isNaN(hours)||hours<=0){err.textContent='Въведи колко часа си работил, например 8 или 8,5.';return}
+    if(hours>24){err.textContent='Смяната не може да е повече от 24 часа.';return}
+    if(isNaN(km)||km<0){err.textContent='Въведи километрите като число или остави празно.';return}
+    if(isNaN(revAmt)||revAmt<0){err.textContent='Въведи оборота като число или остави празно.';return}
+    const ov=$('#orders').value.trim();const orders=ov===''?0:Number(ov);
+    if(!Number.isInteger(orders)||orders<0){err.textContent='Въведи броя поръчки като цяло число или остави празно.';return}
+    const tv=$('#tip').value.trim();const tipAmt=tv===''?0:parse(tv);
+    if(isNaN(tipAmt)||tipAmt<0){err.textContent='Въведи бакшиша като число или остави празно.';return}
+    const fp=fuelParams();
+    const mEl=document.getElementById('fuelManual');const mv=mEl?mEl.value.trim():'';const manualAmt=mv===''?null:parse(mv);
+    if(manualAmt!==null&&(isNaN(manualAmt)||manualAmt<0)){err.textContent='Въведи горивото като число или остави празно.';return}
+    if(fp.bad&&manualAmt===null){err.textContent=fp.bad;return}
+    const price=fp.p, auto=autoFuel()&&manualAmt===null, manual=manualAmt!==null;
+    const liters=manual?(price>0?Math.round(manualAmt/price*100)/100:0):(fp.p>0&&fp.c>0?Math.round(km*fp.c)/100:0);
+    const fuelAmt=manual?manualAmt:liters*price;
+    const editing=sheetState.mode==='edit'?S.shifts.find(z=>z.start===sheetState.editStart):null;
+    let st=new Date(dv+'T06:00').getTime();
+    while(S.shifts.some(z=>z!==editing&&z.start===st))st+=60000;
+    const en=st+Math.round(hours*3600000);
+    if(editing){const r=shiftRev(editing),tp=shiftTip(editing);S.entries=S.entries.filter(e=>e!==r&&e!==tp);S.shifts=S.shifts.filter(z=>z!==editing)}
+    S.shifts.push({start:st,end:en,km:Math.round(km),fuel:Math.round(fuelAmt*100)/100,price,liters,auto,manual,orders});
+    if(revAmt>0){const amt=Math.round(revAmt*100)/100;S.entries.push({id:Date.now().toString(36),t:st,kind:'in',amt,comm:Math.round(amt*S.settings.comm)/100,cat:'Оборот за смяната',shift:st});}
+    if(tipAmt>0)S.entries.push({id:Date.now().toString(36)+'t',t:st,kind:'in',amt:Math.round(tipAmt*100)/100,comm:0,cat:'Бакшиш',shift:st});
+    if(sheetState.mode==='end')S.active=null;
+    save();closeSheet();render();
+  }
+  if(a==='reset'){
+    if(!resetArmed){resetArmed=true;render();return}
+    S=fresh();save();resetArmed=false;tab='today';render();
+  }
+});
+document.addEventListener('change',e=>{
+  if(e.target.dataset.due){const d=S.due.find(x=>x.id===e.target.dataset.due);d.date=e.target.value;save();render()}
+  if(e.target.id==='rent'){const v=e.target.value.trim();const n=v===''?0:parse(v);
+    if(isNaN(n)||n<0){e.target.value=curRent()?String(curRent()).replace('.',','):'';return}
+    const amt=Math.round(n*100)/100;if(amt!==curRent()){const today=ymd(Date.now());S.settings.rentHist=S.settings.rentHist.filter(r=>r.from!==today);S.settings.rentHist.push({from:today,amt});save();render()}}
+  if(e.target.id==='fuel'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.fuel=Math.round(n*1000)/1000;save();render()}else e.target.value=S.settings.fuel?String(S.settings.fuel).replace('.',','):''}
+  if(e.target.id==='cons'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0&&n<50){S.settings.cons=Math.round(n*10)/10;save();render()}else e.target.value=S.settings.cons?String(S.settings.cons).replace('.',','):''}
+  if(e.target.id==='comm'){const n=parse(e.target.value);if(n>=0&&n<=100){S.settings.comm=n;save()}else e.target.value=String(S.settings.comm).replace('.',',')}
+  if(e.target.id==='amort'){const n=parse(e.target.value);if(n>=0){S.settings.amort=n;save()}else e.target.value=String(S.settings.amort).replace('.',',')}
+});
+function upd(){const c=$('#calc');if(!c)return;const v=parse($('#amt').value)||0;if(litersMode())c.innerHTML=calcText(v);else if(sheetState&&sheetState.mode==='rev')c.innerHTML=`Комисионна ${String(S.settings.comm).replace('.',',')}%: ${eur(v*S.settings.comm/100)}, остават <b>${eur(v-v*S.settings.comm/100)}</b>`}
+document.addEventListener('input',e=>{if(e.target.id==='amt')upd();
+  if(['km','fuelPrice','consIn','fuelManual'].includes(e.target.id))fuelLive();
+});
+function fuelParams(){
+  const pe=document.getElementById('fuelPrice'),ce=document.getElementById('consIn');
+  const p=S.settings.fuel>0?S.settings.fuel:(pe&&pe.value.trim()?parse(pe.value):0);
+  const c=S.settings.cons>0?S.settings.cons:(ce&&ce.value.trim()?parse(ce.value):0);
+  let bad='';
+  if(isNaN(p)||p<0||p>10)bad='Въведи цена на литър като число, например 1,45.';
+  else if(isNaN(c)||c<0||c>50)bad='Въведи разход на 100 км като число, например 6,5.';
+  return {p:bad?0:p,c:bad?0:c,bad};
+}
+function fuelLive(){
+  const el=document.getElementById('autoFuel');if(!el)return;
+  const k=parse($('#km').value)||0,{p,c}=fuelParams();
+  const m=document.getElementById('fuelManual');
+  const mv=m&&m.value.trim()?parse(m.value):null;
+  if(mv!==null&&!isNaN(mv)){
+    el.innerHTML=`Гориво: <b>${eur(mv)}</b> (въведено от теб).${p>0&&k>0?` Това прави ${n1(mv/p/k*100)} л на 100 км.`:''}`;return}
+  if(p>0&&c>0&&k>0){const l=k*c/100;
+    el.innerHTML=`Гориво: <b>${eur(l*p)}</b><br>${k} км × ${n1(c)} л/100 км = ${n1(l)} л, по ${eur(p)} на литър.`;return}
+  const miss=[];
+  if(!(k>0))miss.push('километрите');
+  if(!(p>0))miss.push('цената на литър');
+  if(!(c>0))miss.push('разхода на 100 км');
+  const list=miss.length>1?miss.slice(0,-1).join(', ')+' и '+miss[miss.length-1]:miss[0];
+  el.textContent=m
+    ? `За да се сметне горивото, попълни ${list}. Или напиши в полето „Гориво“ колко си платил.`
+    : `Горивото ще се сметне, когато попълниш ${list}.`;
+}
+function autoFuel(){return S.settings.fuel>0&&S.settings.cons>0}
+function sheetPrice(){const el=$('#fuelPrice');const p=el?parse(el.value):NaN;return p>0?p:0}
+function cons(fuelEur,km){const p=sheetPrice();return p>0&&km>0&&fuelEur>0?fuelEur/p/km*100:null}
+const n1=v=>v.toLocaleString('bg-BG',{minimumFractionDigits:1,maximumFractionDigits:1});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&sheetState)closeSheet();
+  if((e.key==='Enter'||e.key===' ')&&!sheetState&&e.target.dataset&&e.target.dataset.info){e.preventDefault();openSheet('info',{info:e.target.dataset.info});return}
+  if(e.key==='Enter'&&sheetState){const b=$('#sheet .go');b&&b.click()}
+});
+setInterval(()=>{if(S.active&&tab==='today'&&!sheetState)render()},60000);
+render();
+initCloud();
+</script>
+</body>
+</html>
