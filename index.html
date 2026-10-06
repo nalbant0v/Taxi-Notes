@@ -311,15 +311,15 @@ function consFor(keys){const sh=S.shifts.filter(x=>keys.has(ymd(x.start))&&x.lit
 function shiftTip(sh){return S.entries.find(e=>e.kind==='in'&&e.cat==='Бакшиш'&&e.shift===sh.start)||null}
 function shiftRev(sh){return S.entries.find(e=>e.kind==='in'&&e.cat!=='Бакшиш'&&(e.shift===sh.start||(e.shift===undefined&&e.cat==='Оборот за смяната'&&e.t===sh.start)))||null}
 function dayStats(key){
-  let inc=0,tip=0,out=0,ms=0,km=0,comm=0,fuel=0,orders=0;
+  let inc=0,tip=0,out=0,ms=0,km=0,comm=0,fuel=0,orders=0,nsh=0;
   for(const e of S.entries) if(ymd(e.t)===key){ if(e.kind==='in'){if(e.cat==='Бакшиш')tip+=e.amt;else{inc+=e.amt;comm+=e.comm||0}} else out+=e.amt; }
-  for(const s of S.shifts) if(ymd(s.start)===key){ ms+=s.end-s.start; km+=s.km||0; fuel+=s.fuel||0; orders+=s.orders||0; }
+  for(const s of S.shifts) if(ymd(s.start)===key){ nsh++; ms+=s.end-s.start; km+=s.km||0; fuel+=s.fuel||0; orders+=s.orders||0; }
   if(S.active && ymd(S.active.start)===key) ms+=Date.now()-S.active.start;
   const amort=km*S.settings.amort;
   const rent=dailyRent(key), yearly=dailyYearly(key);
   const net=inc+tip-comm-fuel-rent-yearly-out-amort;
   const hours=ms/3600000;
-  return {inc,tip,orders,out,comm,fuel,rent,yearly,amort,net,ms,km,perH:hours>0.05?net/hours:null};
+  return {inc,tip,orders,out,comm,fuel,rent,yearly,amort,net,ms,km,nsh,perH:hours>0.05?net/hours:null};
 }
 
 function shiftStats(s){
@@ -330,10 +330,10 @@ function shiftStats(s){
   const linked=new Set(S.shifts.filter(z=>ymd(z.start)===k).flatMap(z=>[shiftRev(z),shiftTip(z)]).filter(Boolean));const ot=shiftTip(s);
   let freeIn=0,out=0;
   for(const e of S.entries) if(ymd(e.t)===k){ if(e.kind==='in'){if(!linked.has(e))freeIn+=e.amt-(e.comm||0)} else out+=e.amt; }
-  const ms=s.end-s.start, share=d.ms>0?ms/d.ms:0;
+  const ms=s.end-s.start, share=d.ms>0?ms/d.ms:(d.nsh?1/d.nsh:0);
   const net=(own?own.amt-(own.comm||0):0)+(ot?ot.amt:0)-(s.fuel||0)-(s.km||0)*S.settings.amort+share*(freeIn-out-d.rent-d.yearly);
   const h=ms/3600000;
-  return {net,perH:h>0?net/h:0};
+  return {net,perH:h>0?net/h:null};
 }
 
 function render(){
@@ -353,13 +353,13 @@ function heroNet(d,lbl){
   return `<section class="hero" data-info="net" role="button" tabindex="0"><div class="lbl">${lbl}</div><div class="big num ${d.net<0?'neg':''}">${eur(d.net)}</div></section>`;
 }
 function rangeAgg(keys){
-  const a={inc:0,net:0,ms:0,orders:0,km:0,tip:0,days:0};
-  for(const k of keys){const d=dayStats(k);if(!d.ms)continue;a.days++;a.inc+=d.inc;a.net+=d.net;a.ms+=d.ms;a.orders+=d.orders;a.km+=d.km;a.tip+=d.tip}
+  const a={inc:0,net:0,ms:0,orders:0,km:0,tip:0,days:0,nsh:0,hdays:0};
+  for(const k of keys){const d=dayStats(k);if(!d.nsh)continue;a.days++;a.nsh+=d.nsh;if(d.ms)a.hdays++;a.inc+=d.inc;a.net+=d.net;a.ms+=d.ms;a.orders+=d.orders;a.km+=d.km;a.tip+=d.tip}
   const sh=S.shifts.filter(x=>keys.has(ymd(x.start))&&x.liters&&x.km);
   const L=sh.reduce((s,x)=>s+x.liters,0),LK=sh.reduce((s,x)=>s+x.km,0);
   const h=a.ms/3600000;
   return {
-    hoursDay:a.days?h/a.days:null, hoursTot:h>0?h:null,
+    nsh:a.nsh, hoursDay:a.hdays?h/a.hdays:null, hoursTot:h>0?h:null,
     perH:h>0.05?a.net/h:null,
     grossH:h>0.05?(a.inc+a.tip)/h:null,
     perOrder:a.orders?a.inc/a.orders:null,
@@ -413,9 +413,9 @@ function statsBlock(k,curKeys,prevKeys,vsTxt,note){
   }
   const avg=rangeAgg(prev);
   cur.hours=dayMode?cur.hoursDay:cur.hoursTot; avg.hours=dayMode?avg.hoursDay:avg.hoursTot;
-  const noShift=cur.hoursTot===null;
+  const noShift=!cur.nsh;
   const rows=[
-    ['Отработени часове','hours',v=>hm(v*3600000),null,''],
+    ['Отработени часове','hours',v=>hm(v*3600000),null,'въведи часовете в смяната'],
     ['Оборот на час','grossH',v=>eur(v),true,''],
     ['Чисто на час','perH',v=>eur(v),true,''],
     ['Поръчки на час','ordersH',v=>n1(v),true,'въведи брой поръчки в смяната'],
@@ -428,7 +428,7 @@ function statsBlock(k,curKeys,prevKeys,vsTxt,note){
     const p=Math.round((c-a)/Math.abs(a)*100);if(p===0)return `<small class="cmp">същото ${vsTxt}</small>`;
     const good=higherGood?p>0:p<0;return `<small class="cmp ${higherGood===null?'':good?'pos':'neg'}">${p>0?'▲ +'+p:'▼ −'+Math.abs(p)}% ${vsTxt}</small>`};
   return `<div class="stat-head"><h2>Статистика</h2>${dayMode?cmpToggle():''}</div>
-  <div class="list">${rows.map(([lbl,key,f,hg,miss])=>`<div class="row" data-info="${key}" role="button" tabindex="0"><div class="what">${lbl}</div><div class="amt num" style="text-align:right">${cur[key]===null?`<span style="color:var(--muted)">—</span>${noShift?'<small class="cmp">няма въведена смяна</small>':miss?`<small class="cmp">${miss}</small>`:''}`:f(cur[key])+cmp(key,hg)}</div></div>`).join('')}</div>
+  <div class="list">${rows.map(([lbl,key,f,hg,miss])=>`<div class="row" data-info="${key}" role="button" tabindex="0"><div class="what">${lbl}</div><div class="amt num" style="text-align:right">${cur[key]===null?`<span style="color:var(--muted)">—</span>${noShift?'<small class="cmp">няма въведена смяна</small>':(cur.hoursTot===null&&['hours','grossH','perH','ordersH'].includes(key))?'<small class="cmp">въведи часовете в смяната</small>':miss?`<small class="cmp">${miss}</small>`:''}`:f(cur[key])+cmp(key,hg)}</div></div>`).join('')}</div>
   ${avg.perH!==null||dayMode?`<p class="hint">${note}</p>`:''}`;
 }
 function dayBody(k,title,noShifts){
@@ -445,8 +445,8 @@ function dayBody(k,title,noShifts){
   const sh=S.shifts.filter(s=>ymd(s.start)===k).sort((a,b)=>b.start-a.start);
   const shRows=sh.map(s=>{const ss=shiftStats(s);return `
     <div class="row shiftrow" data-editrow="${s.start}" role="button" tabindex="0" aria-label="Промени смяната">
-      <div class="what">Смяна, ${hm(s.end-s.start)}<small>${s.orders?s.orders+' поръчки, ':''}${s.km?s.km+' км':'без километри'}${s.fuel?', гориво '+eur(s.fuel):s.km?', <span class="warn-t">горивото не е сметнато</span>':''}${s.liters&&s.km?', '+n1(s.liters/s.km*100)+' л/100 км':''}, чисто ${eur(ss.net)}</small></div>
-      <div class="amt num ${ss.perH<0?'neg':''}">${eur(ss.perH)}<small style="display:block;font-weight:400;color:var(--muted);font-size:.75rem;text-align:right">на час</small></div>
+      <div class="what">Смяна, ${s.end>s.start?hm(s.end-s.start):'без часове'}<small>${s.orders?s.orders+' поръчки, ':''}${s.km?s.km+' км':'без километри'}${s.fuel?', гориво '+eur(s.fuel):s.km?', <span class="warn-t">горивото не е сметнато</span>':''}${s.liters&&s.km?', '+n1(s.liters/s.km*100)+' л/100 км':''}, чисто ${eur(ss.net)}</small></div>
+      <div class="amt num ${ss.perH!==null&&ss.perH<0?'neg':''}">${ss.perH===null?eur(ss.net):eur(ss.perH)}<small style="display:block;font-weight:400;color:var(--muted);font-size:.75rem;text-align:right">${ss.perH===null?'чисто':'на час'}</small></div>
       ${s.km&&!s.fuel&&autoFuel()?`<button class="fixfuel" data-refuel="${s.start}">Сметни гориво</button>`:''}
       <button class="edit" data-editshift="${s.start}" aria-label="Промени смяната">✎</button>
       <button class="x" data-delshift="${s.start}" aria-label="Изтрий смяната">×</button>
@@ -536,10 +536,10 @@ function viewWeek(){
   const days=periodDays(period,weekOff).map(k=>{const t=new Date(k+'T12:00');return {k,t:t.getTime(),future:k>todayK,...dayStats(k)}});
   const max=Math.max(1,...days.map(d=>Math.abs(d.net)));
   const bars=days.map(d=>`<button class="bar ${d.k===todayK?'today':''}" ${d.future?'disabled':''} data-day="${d.k}" aria-label="${WD[new Date(d.t).getDay()]}, ${dateLbl(d.k)}"><i class="${d.net<0?'n':''}" style="height:${d.future?0:Math.round(Math.abs(d.net)/max*100)}%"></i>${M?'':`<span>${WDS[new Date(d.t).getDay()]}</span><span class="dn">${new Date(d.t).getDate()}</span>`}</button>`).join('');
-  const listDays=days.filter(d=>!d.future&&(!M||d.ms||d.k===todayK)).reverse();
+  const listDays=days.filter(d=>!d.future&&(!M||d.nsh||d.k===todayK)).reverse();
   const dayRows=listDays.map(d=>`
     <button class="row dayrow" data-day="${d.k}">
-      <div class="what">${WD[new Date(d.t).getDay()]}<small>${dateLbl(d.k)}${d.ms?', '+hm(d.ms):', почивен'}</small></div>
+      <div class="what">${WD[new Date(d.t).getDay()]}<small>${dateLbl(d.k)}${d.ms?', '+hm(d.ms):d.nsh?', без часове':', почивен'}</small></div>
       <div class="amt num ${d.net<0?'neg':''}">${eur(d.net)}${d.perH!==null?`<small style="display:block;font-weight:400;color:var(--muted);font-size:.75rem;text-align:right">${eur(d.perH)}/ч</small>`:''}</div>
       <span class="chev">›</span>
     </button>`).join('')||`<div class="empty">Няма работни дни в този период.</div>`;
@@ -684,7 +684,7 @@ function drawSheet(){
     const hrs=ed||end?Math.round((en-st)/360000)/10:'';
     el.innerHTML=`<div class="pair">
       <label class="field"><span>Дата</span><input type="date" id="sDate" value="${ymd(st)}" max="${ymd(Date.now())}"></label>
-      <label class="field"><span>Отработени часове</span><input id="sHours" class="num" inputmode="decimal" value="${hrs?String(hrs).replace('.',','):''}"></label>
+      <label class="field"><span>Отработени часове (по желание)</span><input id="sHours" class="num" inputmode="decimal" value="${hrs?String(hrs).replace('.',','):''}"></label>
     </div>
     <div class="pair">
       <label class="field"><span>Оборот, €</span>
@@ -791,8 +791,8 @@ document.addEventListener('click',e=>{
     const err=$('#err');
     if(!dv){err.textContent='Избери дата.';return}
     if(dv>ymd(Date.now())){err.textContent='Датата не може да е в бъдещето.';return}
-    if(isNaN(hours)||hours<=0){err.textContent='Въведи колко часа си работил, например 8 или 8,5.';return}
-    if(hours>24){err.textContent='Смяната не може да е повече от 24 часа.';return}
+    if(hv!==''&&(isNaN(hours)||hours<=0)){err.textContent='Въведи часовете като число, например 8 или 8,5, или остави празно.';return}
+    if(hv!==''&&hours>24){err.textContent='Смяната не може да е повече от 24 часа.';return}
     if(isNaN(km)||km<0){err.textContent='Въведи километрите като число или остави празно.';return}
     if(isNaN(revAmt)||revAmt<0){err.textContent='Въведи оборота като число или остави празно.';return}
     const ov=$('#orders').value.trim();const orders=ov===''?0:Number(ov);
@@ -809,7 +809,7 @@ document.addEventListener('click',e=>{
     const editing=sheetState.mode==='edit'?S.shifts.find(z=>z.start===sheetState.editStart):null;
     let st=new Date(dv+'T06:00').getTime();
     while(S.shifts.some(z=>z!==editing&&z.start===st))st+=60000;
-    const en=st+Math.round(hours*3600000);
+    const en=st+(hv===''?0:Math.round(hours*3600000));
     if(editing){const r=shiftRev(editing),tp=shiftTip(editing);S.entries=S.entries.filter(e=>e!==r&&e!==tp);S.shifts=S.shifts.filter(z=>z!==editing)}
     const nsh={start:st,end:en,km:Math.round(km),fuel:Math.round(fuelAmt*100)/100,price,liters,auto,manual,orders,sid:(editing&&editing.sid)||newSid()};
     S.shifts.push(nsh);
