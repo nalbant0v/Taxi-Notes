@@ -206,7 +206,7 @@ S.settings=Object.assign({amort:0,comm:0,commSrc:['Диспечер'],fuel:0,con
 if(S.settings.amortV!==2){if(S.settings.amort===0.08)S.settings.amort=0;S.settings.amortV=2;}
 /* Anonymous stats: only numbers, no device or person id */
 const REPORT_URL='https://script.google.com/macros/s/AKfycby9kuVKM2sNpHMw0Pq3hSxfTBhq3mz9kEtLAXJkCMBx_ZIwscKfN1NPI1ayDHTH9zkLzA/exec';
-const APP_V='1.1';
+const APP_V='1.2';
 function newSid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4)}
 function canReport(){return REPORT_URL&&S.settings.share!==false&&!/claude/.test(location.hostname)}
 function deviceId(){if(!S.did){S.did=Math.random().toString(36).slice(2,8);S.firstSeen=ymd(Date.now());save()}return S.did}
@@ -223,10 +223,8 @@ function report(action,sh){
   try{
     if(!canReport())return;
     if(!sh.sid){sh.sid=newSid();save()}
-    const k=ymd(sh.start),h=(sh.end-sh.start)/3600000,r=shiftRev(sh),tp=shiftTip(sh),ss=action==='изтрита'?{net:0,perH:0}:shiftStats(sh);
-    const r2=v=>Math.round((v||0)*100)/100;
-    const d={type:'shift',did:deviceId(),id:sh.sid,action,date:k,weekday:WD[new Date(k+'T12:00').getDay()],hours:r2(h),rev:r2(r&&r.amt),tip:r2(tp&&tp.amt),orders:sh.orders||0,km:sh.km||0,fuel:r2(sh.fuel),
-      commPct:r&&r.amt?r2(r.comm/r.amt*100):r2(S.settings.comm),comm:r2(r&&r.comm),rent:r2(dailyRent(k)),net:r2(ss.net),perH:r2(ss.perH),v:APP_V};
+    const k=ymd(sh.start),h=(sh.end-sh.start)/3600000;
+    const d={type:'shift',did:deviceId(),id:sh.sid,action,date:k,weekday:WD[new Date(k+'T12:00').getDay()],hours:Math.round(h*100)/100,orders:sh.orders||0,v:APP_V};
     send(d);
   }catch(e){}
 }
@@ -593,7 +591,6 @@ function viewSet(){
   <label class="field"><span>Амортизация на колата, € на 100 км</span>
     <input type="text" inputmode="decimal" id="amort" value="${S.settings.amort?String(Math.round(S.settings.amort*100*100)/100).replace('.',','):''}"></label>
   <p class="note">Колко евро според теб струва износването на колата (гуми, ремонти, обезценка) за всеки 100 км. Сумата я определяш ти. Ако колата е под аренда, обикновено е 0 или се оставя празно.</p>
-  <label class="toggle"><input type="checkbox" id="share" ${S.settings.share!==false?'checked':''}><span><b>Анонимни данни за подобряване на тефтера</b><small>Изпращат се числата от смените (часове, оборот, бакшиш, поръчки, километри, разходи) и в кои дни е отварян тефтерът, с анонимен случаен код вместо име. Не се изпращат име, телефонен номер или местоположение.</small></span></label>
   <p class="note">${cloudState==='cloud'?'✓ Данните се пазят в профила ти в Claude и остават след затваряне на приложението. Никой друг не ги вижда.':cloudState==='retry'?'Последното записване в профила ти не мина. Ще опитаме отново при следващата промяна.':'Данните се пазят само на това устройство. Ако приложението изчисти паметта си, може да се загубят.'}</p>`;
 }
 
