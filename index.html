@@ -289,6 +289,7 @@ const time=t=>new Date(t).toLocaleTimeString('bg-BG',{hour:'2-digit',minute:'2-d
 
 function curRent(){const h=S.settings.rentHist;return h.length?h[h.length-1].amt:0}
 function firstDataDay(){let m=null;for(const z of S.shifts){const k=ymd(z.start);if(!m||k<m)m=k}for(const e of S.entries){const k=ymd(e.t);if(!m||k<m)m=k}return m}
+function dailyYearly(k){const y=S.settings.yearly||0;if(!y||k>ymd(Date.now()))return 0;const f=firstDataDay();if(!f||k<f)return 0;return Math.round(y/365*100)/100}
 function dailyRent(k){
   const h=S.settings.rentHist;
   if(!h.length||k>ymd(Date.now()))return 0;
@@ -305,10 +306,10 @@ function dayStats(key){
   for(const s of S.shifts) if(ymd(s.start)===key){ ms+=s.end-s.start; km+=s.km||0; fuel+=s.fuel||0; orders+=s.orders||0; }
   if(S.active && ymd(S.active.start)===key) ms+=Date.now()-S.active.start;
   const amort=km*S.settings.amort;
-  const rent=dailyRent(key);
-  const net=inc+tip-comm-fuel-rent-out-amort;
+  const rent=dailyRent(key), yearly=dailyYearly(key);
+  const net=inc+tip-comm-fuel-rent-yearly-out-amort;
   const hours=ms/3600000;
-  return {inc,tip,orders,out,comm,fuel,rent,amort,net,ms,km,perH:hours>0.05?net/hours:null};
+  return {inc,tip,orders,out,comm,fuel,rent,yearly,amort,net,ms,km,perH:hours>0.05?net/hours:null};
 }
 
 function shiftStats(s){
@@ -320,7 +321,7 @@ function shiftStats(s){
   let freeIn=0,out=0;
   for(const e of S.entries) if(ymd(e.t)===k){ if(e.kind==='in'){if(!linked.has(e))freeIn+=e.amt-(e.comm||0)} else out+=e.amt; }
   const ms=s.end-s.start, share=d.ms>0?ms/d.ms:0;
-  const net=(own?own.amt-(own.comm||0):0)+(ot?ot.amt:0)-(s.fuel||0)-(s.km||0)*S.settings.amort+share*(freeIn-out-d.rent);
+  const net=(own?own.amt-(own.comm||0):0)+(ot?ot.amt:0)-(s.fuel||0)-(s.km||0)*S.settings.amort+share*(freeIn-out-d.rent-d.yearly);
   const h=ms/3600000;
   return {net,perH:h>0?net/h:0};
 }
@@ -360,11 +361,12 @@ function rangeAgg(keys){
 }
 function cmpToggle(){const b=S.settings.cmpBase||'week';return `<div class="seg" role="group" aria-label="Сравнение с"><button data-cmp="day" aria-pressed="${b==='day'}">Ден</button><button data-cmp="week" aria-pressed="${b==='week'}">7 дни</button><button data-cmp="month" aria-pressed="${b==='month'}">30 дни</button></div>`}
 const INFO={
-  net:['Чиста печалба','Каквото ти остава за деня след всички удръжки.','Оборот + бакшиш − комисионна − гориво − аренда/лизинг − други разходи − амортизация.'],
+  net:['Чиста печалба','Каквото ти остава за деня след всички удръжки.','Оборот + бакшиш − комисионна − гориво − аренда/лизинг − годишни разходи − други разходи − амортизация.'],
   inc:['Оборот','Сумата, която си взел от клиентите за деня, преди удръжки. Въвежда се при въвеждане на смяна.','Бакшишът не влиза тук, той се показва отделно.'],
   tip:['Бакшиш','Парите, които клиентите са ти дали отгоре.','Изцяло твои са. От тях не се взима комисионна.'],
   comm:['Комисионна','Делът, който таксиметровата фирма взима от оборота.','Оборот × процента комисионна от Настройки. Процентът се записва в момента на въвеждане на смяната, така че ако го промениш по-късно, старите смени не се преизчисляват. Не се смята върху бакшиша.'],
   fuel:['Гориво','Колко е струвало горивото за деня.','Километри ÷ 100 × разход на 100 км × цена на литър. Пример: 180 км ÷ 100 × 6,5 л × 1,45 € = 16,97 €. Ако в смяната си въвел сумата за гориво ръчно, се взима тя.'],
+  yearly:['Годишни разходи','Дневната част от годишните разходи за колата и документите.','Сумата от Настройки ÷ 365. Брои се всеки ден, включително почивните, от първата ти смяна.'],
   rent:['Аренда/лизинг','Дневната част от седмичната аренда или лизинг на колата.','Сумата от Настройки ÷ 7. Брои се всеки ден, включително почивните, защото се плаща независимо дали работиш.'],
   out:['Други разходи','Разходите, които си въвел сам с бутона „+ Разход“.','Например измиване, храна, ремонт и други. Горивото, арендата и комисионната са отделно.'],
   amort:['Амортизация','Износването на колата: гуми, ремонти, обезценка.','Километри ÷ 100 × сумата за 100 км, която си задал в Настройки.'],
@@ -446,6 +448,7 @@ function dayBody(k,title,noShifts){
     <div data-info="comm" role="button" tabindex="0"><span>Комисионна</span><b class="num">${eur(d.comm)}</b></div>
     <div data-info="fuel" role="button" tabindex="0"><span>Гориво</span><b class="num">${eur(d.fuel)}</b></div>
     <div data-info="rent" role="button" tabindex="0"><span>Аренда/лизинг</span><b class="num">${eur(d.rent)}</b></div>
+    ${d.yearly>0?`<div data-info="yearly" role="button" tabindex="0"><span>Годишни разходи</span><b class="num">${eur(d.yearly)}</b></div>`:''}
     <div data-info="out" role="button" tabindex="0"><span>Други разходи</span><b class="num">${eur(d.out)}</b></div>
     ${d.amort>0?`<div data-info="amort" role="button" tabindex="0"><span>Амортизация</span><b class="num">${eur(d.amort)}</b></div>`:''}
   </div>
@@ -521,10 +524,10 @@ function viewWeek(){
       <div class="amt num ${d.net<0?'neg':''}">${eur(d.net)}${d.perH!==null?`<small style="display:block;font-weight:400;color:var(--muted);font-size:.75rem;text-align:right">${eur(d.perH)}/ч</small>`:''}</div>
       <span class="chev">›</span>
     </button>`).join('')||`<div class="empty">Няма работни дни в този период.</div>`;
-  const tot=days.reduce((a,d)=>({inc:a.inc+d.inc,tip:a.tip+d.tip,comm:a.comm+d.comm,fuel:a.fuel+d.fuel,rent:a.rent+d.rent,out:a.out+d.out,amort:a.amort+d.amort,net:a.net+d.net}),{inc:0,tip:0,comm:0,fuel:0,rent:0,out:0,amort:0,net:0});
+  const tot=days.reduce((a,d)=>({inc:a.inc+d.inc,tip:a.tip+d.tip,comm:a.comm+d.comm,fuel:a.fuel+d.fuel,rent:a.rent+d.rent,yearly:a.yearly+d.yearly,out:a.out+d.out,amort:a.amort+d.amort,net:a.net+d.net}),{inc:0,tip:0,comm:0,fuel:0,rent:0,yearly:0,out:0,amort:0,net:0});
   const keys=new Set(days.map(d=>d.k));
   const wk=S.entries.filter(e=>keys.has(ymd(e.t)));
-  const group=(kind,list)=>{const m={};for(const e of wk)if(e.kind===kind)m[e.cat]=(m[e.cat]||0)+e.amt;if(kind==='out'){m['Гориво']=(m['Гориво']||0)+tot.fuel;m['Амортизация']=tot.amort;m['Аренда/лизинг']=tot.rent}
+  const group=(kind,list)=>{const m={};for(const e of wk)if(e.kind===kind)m[e.cat]=(m[e.cat]||0)+e.amt;if(kind==='out'){m['Гориво']=(m['Гориво']||0)+tot.fuel;m['Амортизация']=tot.amort;m['Аренда/лизинг']=tot.rent;m['Годишни разходи']=tot.yearly}
     const sum=Object.values(m).reduce((a,b)=>a+b,0);
     const rows=list.filter(c=>m[c]).sort((a,b)=>m[b]-m[a]).map(c=>`<div class="row"><div class="what">${c}<div class="meter"><i style="width:${Math.round(m[c]/sum*100)}%"></i></div></div><b class="num">${eur(m[c])}</b></div>`).join('');
     return rows||`<div class="empty">Няма разходи за този период.</div>`;};
@@ -552,12 +555,13 @@ function viewWeek(){
     <div><span>Комисионна</span><b class="num">${eur(tot.comm)}</b></div>
     <div><span>Гориво</span><b class="num">${eur(tot.fuel)}</b></div>
     <div><span>Аренда/лизинг</span><b class="num">${eur(tot.rent)}</b></div>
+    ${tot.yearly>0?`<div><span>Годишни разходи</span><b class="num">${eur(tot.yearly)}</b></div>`:''}
     <div><span>Други разходи</span><b class="num">${eur(tot.out)}</b></div>
     ${tot.amort>0?`<div><span>Амортизация</span><b class="num">${eur(tot.amort)}</b></div>`:''}
   </div>
   ${statsBlock(null,keys,prevKeys,M?'спрямо миналия месец':'спрямо миналата седмица',M?'Сравнението е с предишния месец.':'Сравнението е с предишната седмица.')}
   <h2>За какво отиват</h2>
-  <div class="list split">${group('out',['Аренда/лизинг','Гориво','Амортизация',...EXPS])}</div>
+  <div class="list split">${group('out',['Аренда/лизинг','Годишни разходи','Гориво','Амортизация',...EXPS])}</div>
   <h2>По дни</h2>
   <div class="bars ${M?'month':''}">${bars}</div>
   <p class="note">Натисни ден, за да видиш детайлите или да поправиш смяна.</p>
@@ -593,6 +597,9 @@ function viewSet(){
   <label class="field"><span>Седмична аренда/лизинг на колата, €</span>
     <input type="text" inputmode="decimal" id="rent" value="${curRent()?String(curRent()).replace('.',','):''}"></label>
   <p class="note">${curRent()?`Това е ${eur(curRent()/7)} на ден. `:''}Разделя се на 7 и се записва като разход „Аренда/лизинг“ всеки ден, включително в почивните, от първата ти въведена смяна. Ако я промениш, новата сума важи от днес нататък, а миналите дни остават със старата.</p>
+  <label class="field"><span>Годишни разходи, €</span>
+    <input type="text" inputmode="decimal" id="yearly" value="${S.settings.yearly?String(S.settings.yearly).replace('.',','):''}"></label>
+  <p class="note"><b>Ако караш под аренда, попълни само разходите, които плащаш ти.</b> Общата сума за една година: разрешително, гражданска, каско, данък, прегледи, винетка, таксиметров апарат и др. ${S.settings.yearly?`Това е ${eur(S.settings.yearly/365)} на ден. `:''}Разделя се на 365 и се приспада всеки ден, от първата ти въведена смяна.</p>
   <label class="field"><span>Цена на горивото, € на литър</span>
     <input type="text" inputmode="decimal" id="fuel" value="${S.settings.fuel?String(S.settings.fuel).replace('.',','):''}"></label>
   <label class="field"><span>Разход на колата, л/100 км</span>
@@ -808,6 +815,7 @@ document.addEventListener('change',e=>{
   if(e.target.id==='rent'){const v=e.target.value.trim();const n=v===''?0:parse(v);
     if(isNaN(n)||n<0){e.target.value=curRent()?String(curRent()).replace('.',','):'';return}
     const amt=Math.round(n*100)/100;if(amt!==curRent()){const today=ymd(Date.now());S.settings.rentHist=S.settings.rentHist.filter(r=>r.from!==today);S.settings.rentHist.push({from:today,amt});save();render()}}
+  if(e.target.id==='yearly'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.yearly=Math.round(n*100)/100;save();render()}else e.target.value=S.settings.yearly?String(S.settings.yearly).replace('.',','):''}
   if(e.target.id==='fuel'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0){S.settings.fuel=Math.round(n*1000)/1000;save();render()}else e.target.value=S.settings.fuel?String(S.settings.fuel).replace('.',','):''}
   if(e.target.id==='cons'){const v=e.target.value.trim();const n=v===''?0:parse(v);if(n>=0&&n<50){S.settings.cons=Math.round(n*10)/10;save();render()}else e.target.value=S.settings.cons?String(S.settings.cons).replace('.',','):''}
   if(e.target.id==='share'){S.settings.share=e.target.checked;save()}
