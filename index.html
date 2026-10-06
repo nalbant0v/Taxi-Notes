@@ -171,6 +171,16 @@ nav button[aria-current="page"]{color:var(--ink);font-weight:800;box-shadow:inse
 .duein.bad{border-color:var(--red);outline:2px solid var(--red)}
 .callout{margin:22px 0 4px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--amber) 18%,var(--surface));border:1px solid var(--amber);font-size:.92rem;line-height:1.4}
 .callout.warn{background:color-mix(in srgb,var(--red) 14%,var(--surface));border-color:var(--red)}
+.onboard{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px 6px;margin:6px 0 14px}
+.onboard h2{margin:0 0 8px}
+.onboard ol{list-style:none;margin:0;padding:0}
+.ob-step{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.ob-step:first-child{border-top:0}
+.ob-step small{display:block;color:var(--muted);font-size:.85rem;margin-top:2px}
+.ob-n{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--amber);color:var(--amber-ink)}
+.ob-step.done .ob-n{background:var(--green);color:#fff}
+.ob-step.done b{text-decoration:line-through;color:var(--muted)}
+.ob-btn{margin-top:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--chip);font-weight:600;font-size:.9rem}
 .err{color:var(--red);font-size:.9rem;min-height:1.2em;margin-top:6px}
 @media (prefers-reduced-motion:reduce){.sheet{transition:none}}
 </style>
@@ -459,6 +469,15 @@ function dayBody(k,title,noShifts){
 `};
 }
 
+function onboard(){
+  const set=S.settings.comm>0||curRent()>0||S.settings.fuel>0||S.settings.cons>0;
+  const step=(n,done,title,txt,btn)=>`<li class="ob-step ${done?'done':''}"><span class="ob-n">${done?'✓':n}</span><div><b>${title}</b><small>${txt}</small>${btn}</div></li>`;
+  return `<section class="onboard"><h2>Как да започнеш</h2><ol>
+    ${step(1,set,'Попълни Настройки','Комисионна, аренда/лизинг, цена на горивото и разход на колата. Попълва се веднъж.','<button class="ob-btn" data-tab="set">Към Настройки</button>')}
+    ${step(2,false,'Въведи първата си смяна','След смяната: часове, оборот, километри и поръчки. Отнема 20 секунди.','<button class="ob-btn" data-do="manualday" data-date="'+ymd(Date.now())+'">+ Въведи смяна</button>')}
+    ${step(3,false,'Виж колко реално печелиш','В Статистика: чисто на час, на поръчка и на километър.','')}
+  </ol></section>`;
+}
 function viewToday(){
   const td=new Date();td.setHours(12,0,0,0);td.setDate(td.getDate()+mainOff);
   const k=ymd(td), isToday=mainOff===0;
@@ -477,7 +496,7 @@ function viewToday(){
     <b>${isToday?'Днес':mainOff===-1?'Вчера':WD[td.getDay()]} <span>${WD[td.getDay()].toLowerCase()}, ${dateLbl(k)}</span></b>
     ${isToday?'<button data-do="mnext" disabled aria-label="Следващ ден">›</button>':'<button data-do="mnext" aria-label="Следващ ден">›</button>'}
   </div>`;
-  return nav+heroNet(d,'Чиста печалба '+(isToday?'днес':mainOff===-1?'вчера':'за деня'))+html.replace('@@ACTIONS@@',actions);
+  return nav+(S.shifts.length?'':onboard())+heroNet(d,'Чиста печалба '+(isToday?'днес':mainOff===-1?'вчера':'за деня'))+html.replace('@@ACTIONS@@',actions);
 }
 
 function periodBar(){return `<div class="period-bar"><div class="seg" role="group" aria-label="Период"><button data-period="day" aria-pressed="${period==='day'}">Ден</button><button data-period="week" aria-pressed="${period==='week'}">Седмица</button><button data-period="month" aria-pressed="${period==='month'}">Месец</button></div></div>`}
